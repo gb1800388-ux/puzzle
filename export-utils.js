@@ -184,6 +184,32 @@ class ExportUtils {
                     currentY = endY;
                     break;
 
+                case 'C':
+                    // Cubic Bezier - approximate with line segments
+                    const cp1X = values[0];
+                    const cp1Y = values[1];
+                    const cp2X = values[2];
+                    const cp2Y = values[3];
+                    const cEndX = values[4];
+                    const cEndY = values[5];
+
+                    for (let i = 1; i <= resolution; i++) {
+                        const t = i / resolution;
+                        const t1 = 1 - t;
+                        const t1_3 = t1 * t1 * t1;
+                        const t1_2_t = 3 * t1 * t1 * t;
+                        const t1_t_2 = 3 * t1 * t * t;
+                        const t_3 = t * t * t;
+
+                        const x = t1_3 * currentX + t1_2_t * cp1X + t1_t_2 * cp2X + t_3 * cEndX;
+                        const y = t1_3 * currentY + t1_2_t * cp1Y + t1_t_2 * cp2Y + t_3 * cEndY;
+                        points.push({ x, y });
+                    }
+
+                    currentX = cEndX;
+                    currentY = cEndY;
+                    break;
+
                 case 'A':
                     // Arc - approximate with line segments
                     const rx = values[0];

@@ -147,37 +147,21 @@ class PuzzleGenerator {
     createJigsawPiece(options) {
         const { x, y, width, height, tabSize, hasTopTab, hasRightTab, hasBottomTab, hasLeftTab, row, col } = options;
 
-        let path = `M ${x} ${y}`;
+        let path = `M ${x} ${y} `;
 
         // Top edge
-        if (hasTopTab !== 0) {
-            path += this.createTabPath(x, y, x + width, y, tabSize, hasTopTab, 'horizontal');
-        } else {
-            path += ` L ${x + width} ${y}`;
-        }
+        path += this.createEdgePath(x, y, x + width, y, hasTopTab);
 
         // Right edge
-        if (hasRightTab !== 0) {
-            path += this.createTabPath(x + width, y, x + width, y + height, tabSize, hasRightTab, 'vertical');
-        } else {
-            path += ` L ${x + width} ${y + height}`;
-        }
+        path += this.createEdgePath(x + width, y, x + width, y + height, hasRightTab);
 
-        // Bottom edge
-        if (hasBottomTab !== 0) {
-            path += this.createTabPath(x + width, y + height, x, y + height, tabSize, -hasBottomTab, 'horizontal-reverse');
-        } else {
-            path += ` L ${x} ${y + height}`;
-        }
+        // Bottom edge (reverse direction, invert tab)
+        path += this.createEdgePath(x + width, y + height, x, y + height, -hasBottomTab);
 
-        // Left edge
-        if (hasLeftTab !== 0) {
-            path += this.createTabPath(x, y + height, x, y, tabSize, -hasLeftTab, 'vertical-reverse');
-        } else {
-            path += ` L ${x} ${y}`;
-        }
+        // Left edge (reverse direction, invert tab)
+        path += this.createEdgePath(x, y + height, x, y, -hasLeftTab);
 
-        path += ' Z';
+        path += 'Z';
 
         return {
             path,
@@ -188,36 +172,69 @@ class PuzzleGenerator {
     }
 
     /**
-     * Create tab/blank path for puzzle piece edge
+     * Create edge path with tab/blank using cubic Bezier curves
      */
-    createTabPath(x1, y1, x2, y2, tabSize, direction, orientation) {
-        const isHorizontal = orientation.includes('horizontal');
-        const isReverse = orientation.includes('reverse');
-        const length = isHorizontal ? Math.abs(x2 - x1) : Math.abs(y2 - y1);
-        const tabWidth = tabSize * 1.5;
-        const tabHeight = tabSize * direction;
+    createEdgePath(x1, y1, x2, y2, tabType) {
+        if (tabType === 0) {
+            // Straight edge
+            return `L ${x2} ${y2} `;
+        }
 
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+
+        // Normalized direction
+        const nx = dx / len;
+        const ny = dy / len;
+
+        // Perpendicular direction (90 degrees)
+        const px = -ny;
+        const py = nx;
+
+        // Tab parameters
+        const neckWidth = len * 0.15;  // Ширина "шейки" замка
+        const tabHeight = len * 0.25;   // Высота выступа замка
+        const sign = tabType;           // 1 = выступ, -1 = впадина
+
+        // Key points along the edge
+        const p1x = x1 + dx * 0.25;
+        const p1y = y1 + dy * 0.25;
+        const p2x = x1 + dx * 0.35;
+        const p2y = y1 + dy * 0.35;
+        const p3x = x1 + dx * 0.5;
+        const p3y = y1 + dy * 0.5;
+        const p4x = x1 + dx * 0.65;
+        const p4y = y1 + dy * 0.65;
+        const p5x = x1 + dx * 0.75;
+        const p5y = y1 + dy * 0.75;
+
+        // Tip of the tab
+        const tipX = p3x + px * tabHeight * sign;
+        const tipY = p3y + py * tabHeight * sign;
+
+        // Build path with cubic Bezier curves
         let path = '';
 
-        if (isHorizontal) {
-            const midX = (x1 + x2) / 2;
-            const y = y1;
-            const dir = isReverse ? -1 : 1;
+        // Curve into neck
+        path += `C ${x1 + dx * 0.1 + px * neckWidth * sign} ${y1 + dy * 0.1 + py * neckWidth * sign}, `;
+        path += `${p1x + px * neckWidth * sign} ${p1y + py * neckWidth * sign}, `;
+        path += `${p2x} ${p2y} `;
 
-            path += ` L ${midX - tabWidth / 2} ${y}`;
-            path += ` Q ${midX - tabWidth / 2} ${y + tabHeight * 0.5} ${midX} ${y + tabHeight}`;
-            path += ` Q ${midX + tabWidth / 2} ${y + tabHeight * 0.5} ${midX + tabWidth / 2} ${y}`;
-            path += ` L ${x2} ${y2}`;
-        } else {
-            const midY = (y1 + y2) / 2;
-            const x = x1;
-            const dir = isReverse ? -1 : 1;
+        // Curve to tip
+        path += `C ${p2x + dx * 0.05} ${p2y + dy * 0.05}, `;
+        path += `${tipX - dx * 0.05} ${tipY - dy * 0.05}, `;
+        path += `${tipX} ${tipY} `;
 
-            path += ` L ${x} ${midY - tabWidth / 2}`;
-            path += ` Q ${x + tabHeight * 0.5} ${midY - tabWidth / 2} ${x + tabHeight} ${midY}`;
-            path += ` Q ${x + tabHeight * 0.5} ${midY + tabWidth / 2} ${x} ${midY + tabWidth / 2}`;
-            path += ` L ${x2} ${y2}`;
-        }
+        // Curve from tip
+        path += `C ${tipX + dx * 0.05} ${tipY + dy * 0.05}, `;
+        path += `${p4x - dx * 0.05} ${p4y - dy * 0.05}, `;
+        path += `${p4x} ${p4y} `;
+
+        // Curve out of neck
+        path += `C ${p4x + px * neckWidth * sign} ${p4y + py * neckWidth * sign}, `;
+        path += `${x2 - dx * 0.1 + px * neckWidth * sign} ${y2 - dy * 0.1 + py * neckWidth * sign}, `;
+        path += `${x2} ${y2} `;
 
         return path;
     }
