@@ -1,5 +1,5 @@
 /**
- * Main Application Logic
+ * Main Application Logic - Puzzle Generator
  */
 
 class PuzzleApp {
@@ -11,118 +11,189 @@ class PuzzleApp {
 
         this.initializeElements();
         this.attachEventListeners();
+        this.updateDifficultyDisplay();
     }
 
     initializeElements() {
         this.elements = {
+            // Upload
+            uploadArea: document.getElementById('uploadArea'),
             imageUpload: document.getElementById('imageUpload'),
-            puzzleShape: document.getElementById('puzzleShape'),
-            difficulty: document.getElementById('difficulty'),
-            customPiecesGroup: document.getElementById('customPiecesGroup'),
-            piecesX: document.getElementById('piecesX'),
-            piecesY: document.getElementById('piecesY'),
-            paperSize: document.getElementById('paperSize'),
+            uploadPlaceholder: document.getElementById('uploadPlaceholder'),
+            imagePreview: document.getElementById('imagePreview'),
+
+            // Controls
+            puzzleForm: document.querySelectorAll('input[name="puzzleForm"]'),
+            pieceType: document.querySelectorAll('input[name="pieceType"]'),
+            difficultySlider: document.getElementById('difficultySlider'),
+            piecesCount: document.getElementById('piecesCount'),
+            piecesGrid: document.getElementById('piecesGrid'),
+            paperSize: document.querySelectorAll('input[name="paperSize"]'),
             margin: document.getElementById('margin'),
+            lineWidth: document.getElementById('lineWidth'),
             generateBtn: document.getElementById('generateBtn'),
-            previewCanvas: document.getElementById('previewCanvas'),
-            exportSVG: document.getElementById('exportSVG'),
+
+            // Preview
+            previewContainer: document.getElementById('previewContainer'),
+            previewInfo: document.getElementById('previewInfo'),
+
+            // Export buttons
             exportPNG: document.getElementById('exportPNG'),
-            exportDXF: document.getElementById('exportDXF')
+            exportSVG: document.getElementById('exportSVG'),
+            exportDXF: document.getElementById('exportDXF'),
+            exportCutLines: document.getElementById('exportCutLines')
         };
     }
 
     attachEventListeners() {
-        // Image upload
+        // Upload area click
+        this.elements.uploadArea.addEventListener('click', () => {
+            this.elements.imageUpload.click();
+        });
+
+        // File input change
         this.elements.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
 
-        // Difficulty change
-        this.elements.difficulty.addEventListener('change', (e) => this.handleDifficultyChange(e));
+        // Drag and drop
+        this.elements.uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            this.elements.uploadArea.classList.add('dragover');
+        });
+
+        this.elements.uploadArea.addEventListener('dragleave', () => {
+            this.elements.uploadArea.classList.remove('dragover');
+        });
+
+        this.elements.uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this.elements.uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.loadImage(file);
+            }
+        });
+
+        // Difficulty slider
+        this.elements.difficultySlider.addEventListener('input', () => {
+            this.updateDifficultyDisplay();
+        });
+
+        // Form change - update difficulty display
+        this.elements.puzzleForm.forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.updateDifficultyDisplay();
+            });
+        });
 
         // Generate button
         this.elements.generateBtn.addEventListener('click', () => this.generatePuzzle());
 
         // Export buttons
-        this.elements.exportSVG.addEventListener('click', () => this.exportSVG());
         this.elements.exportPNG.addEventListener('click', () => this.exportPNG());
+        this.elements.exportSVG.addEventListener('click', () => this.exportSVG());
         this.elements.exportDXF.addEventListener('click', () => this.exportDXF());
-
-        // Shape change
-        this.elements.puzzleShape.addEventListener('change', () => {
-            if (this.currentPuzzle) {
-                this.generatePuzzle();
-            }
-        });
+        this.elements.exportCutLines.addEventListener('click', () => this.exportCutLines());
     }
 
     handleImageUpload(event) {
         const file = event.target.files[0];
-        if (!file) return;
+        if (file) {
+            this.loadImage(file);
+        }
+    }
 
+    loadImage(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 this.currentImage = img;
                 this.imageData = e.target.result;
-                this.showNotification('Изображение загружено! Нажмите "Генерировать пазл"');
+
+                // Show preview
+                this.elements.imagePreview.src = this.imageData;
+                this.elements.imagePreview.style.display = 'block';
+                this.elements.uploadPlaceholder.style.display = 'none';
+
+                this.showNotification('Изображение загружено!');
+            };
+            img.onerror = () => {
+                this.showNotification('Ошибка загрузки изображения', 'error');
             };
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
-    handleDifficultyChange(event) {
-        const difficulty = event.target.value;
-        if (difficulty === 'custom') {
-            this.elements.customPiecesGroup.style.display = 'block';
+    getSelectedValue(radioButtons) {
+        for (const radio of radioButtons) {
+            if (radio.checked) {
+                return radio.value;
+            }
+        }
+        return null;
+    }
+
+    updateDifficultyDisplay() {
+        const level = parseInt(this.elements.difficultySlider.value);
+        const form = this.getSelectedValue(this.elements.puzzleForm);
+
+        let grid;
+        if (form === 'circular') {
+            grid = PuzzleGenerator.getCircularDifficultyGrid(level);
+            const pieces = grid.segments * grid.rings;
+            this.elements.piecesCount.textContent = pieces;
+            this.elements.piecesGrid.textContent = `(${grid.segments} × ${grid.rings})`;
         } else {
-            this.elements.customPiecesGroup.style.display = 'none';
+            grid = PuzzleGenerator.getDifficultyGrid(level);
+            const pieces = grid.cols * grid.rows;
+            this.elements.piecesCount.textContent = pieces;
+            this.elements.piecesGrid.textContent = `(${grid.cols} × ${grid.rows})`;
         }
     }
 
     generatePuzzle() {
-        const shape = this.elements.puzzleShape.value;
-        const difficulty = this.elements.difficulty.value;
-        const paperSize = this.elements.paperSize.value;
-        const margin = parseFloat(this.elements.margin.value);
+        const form = this.getSelectedValue(this.elements.puzzleForm);
+        const pieceType = this.getSelectedValue(this.elements.pieceType);
+        const paperSize = this.getSelectedValue(this.elements.paperSize);
+        const margin = parseFloat(this.elements.margin.value) || 10;
+        const lineWidth = parseFloat(this.elements.lineWidth.value) || 0.5;
+        const level = parseInt(this.elements.difficultySlider.value);
 
-        // Get dimensions
-        const dimensions = PuzzleGenerator.getPaperDimensions(paperSize, margin);
+        // Get paper dimensions (landscape by default for horizontal photos)
+        const dimensions = PuzzleGenerator.getPaperDimensions(paperSize, 'landscape', margin);
 
-        // Get piece count
+        // Get grid based on form and difficulty
         let cols, rows;
-        if (difficulty === 'custom') {
-            cols = parseInt(this.elements.piecesX.value);
-            rows = parseInt(this.elements.piecesY.value);
+        if (form === 'circular') {
+            const grid = PuzzleGenerator.getCircularDifficultyGrid(level);
+            cols = grid.segments;
+            rows = grid.rings;
         } else {
-            const settings = PuzzleGenerator.getDifficultySettings(difficulty);
-            cols = settings.cols;
-            rows = settings.rows;
+            const grid = PuzzleGenerator.getDifficultyGrid(level);
+            cols = grid.cols;
+            rows = grid.rows;
         }
 
-        // Adjust for circular puzzles
-        if (shape === 'circular') {
-            // For circular, cols = segments, rows = rings
-            if (difficulty !== 'custom') {
-                cols = cols * 2; // More segments for circular
-            }
-        }
-
-        // Generate puzzle
         try {
             this.currentPuzzle = this.generator.generate({
-                shape,
+                form,
+                pieceType,
                 cols,
                 rows,
                 width: dimensions.width,
                 height: dimensions.height,
-                margin: dimensions.margin
+                margin: dimensions.margin,
+                lineWidth: lineWidth * dimensions.mmToPixels
             });
 
             this.renderPreview();
             this.enableExportButtons();
-            this.showNotification(`Пазл создан! ${cols}×${rows} частей`);
+
+            const totalPieces = cols * rows;
+            this.showNotification(`Пазл создан! ${totalPieces} частей (${cols}×${rows})`);
         } catch (error) {
+            console.error('Generation error:', error);
             this.showNotification('Ошибка при создании пазла: ' + error.message, 'error');
         }
     }
@@ -131,60 +202,107 @@ class PuzzleApp {
         if (!this.currentPuzzle) return;
 
         // Clear preview
-        this.elements.previewCanvas.innerHTML = '';
+        this.elements.previewContainer.innerHTML = '';
 
-        // Create SVG element
-        const svg = ExportUtils.createSVGElement(this.currentPuzzle, this.imageData);
+        // Create SVG preview element
+        const svg = ExportUtils.createSVGPreview(this.currentPuzzle, this.imageData);
+        this.elements.previewContainer.appendChild(svg);
 
-        // Add to preview
-        this.elements.previewCanvas.appendChild(svg);
+        // Update info
+        const { cols, rows, form, pieceType } = this.currentPuzzle;
+        const formNames = {
+            rectangular: 'Прямоугольный',
+            square: 'Квадратный',
+            circular: 'Круговой'
+        };
+        const typeNames = {
+            classic: 'Классический',
+            grid: 'Квадратики'
+        };
+
+        this.elements.previewInfo.innerHTML = `
+            <span>${formNames[form] || form}</span> |
+            <span>${typeNames[pieceType] || pieceType}</span> |
+            <span>${cols * rows} частей</span>
+        `;
     }
 
     enableExportButtons() {
-        this.elements.exportSVG.disabled = false;
         this.elements.exportPNG.disabled = false;
+        this.elements.exportSVG.disabled = false;
         this.elements.exportDXF.disabled = false;
+        this.elements.exportCutLines.disabled = false;
     }
 
-    async exportSVG() {
-        if (!this.currentPuzzle) return;
-
-        const svgContent = ExportUtils.exportSVG(this.currentPuzzle, this.imageData);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        ExportUtils.downloadFile(svgContent, `puzzle-${timestamp}.svg`, 'image/svg+xml');
-        this.showNotification('SVG файл загружен!');
+    getTimestamp() {
+        return new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
     }
 
     async exportPNG() {
         if (!this.currentPuzzle) return;
 
         try {
-            this.showNotification('Создание PNG... Подождите...');
+            this.showNotification('Создание PNG...');
             const blob = await ExportUtils.exportPNG(this.currentPuzzle, this.imageData, 3);
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            ExportUtils.downloadBlob(blob, `puzzle-${timestamp}.png`);
-            this.showNotification('PNG файл загружен!');
+            ExportUtils.downloadBlob(blob, `puzzle-${this.getTimestamp()}.png`);
+            this.showNotification('PNG с изображением скачан!');
         } catch (error) {
-            this.showNotification('Ошибка при создании PNG: ' + error.message, 'error');
+            console.error('PNG export error:', error);
+            this.showNotification('Ошибка экспорта PNG: ' + error.message, 'error');
+        }
+    }
+
+    async exportSVG() {
+        if (!this.currentPuzzle) return;
+
+        try {
+            const svgContent = ExportUtils.exportSVG(this.currentPuzzle, this.imageData);
+            ExportUtils.downloadFile(svgContent, `puzzle-${this.getTimestamp()}.svg`, 'image/svg+xml');
+            this.showNotification('SVG файл скачан!');
+        } catch (error) {
+            console.error('SVG export error:', error);
+            this.showNotification('Ошибка экспорта SVG: ' + error.message, 'error');
         }
     }
 
     exportDXF() {
         if (!this.currentPuzzle) return;
 
-        const dxfContent = ExportUtils.exportDXF(this.currentPuzzle);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        ExportUtils.downloadFile(dxfContent, `puzzle-${timestamp}.dxf`, 'application/dxf');
-        this.showNotification('DXF файл загружен! Готов для ЧПУ (RDWorks)');
+        try {
+            const dxfContent = ExportUtils.exportDXF(this.currentPuzzle);
+            ExportUtils.downloadFile(dxfContent, `puzzle-${this.getTimestamp()}.dxf`, 'application/dxf');
+            this.showNotification('DXF файл скачан! Готов для ЧПУ.');
+        } catch (error) {
+            console.error('DXF export error:', error);
+            this.showNotification('Ошибка экспорта DXF: ' + error.message, 'error');
+        }
+    }
+
+    async exportCutLines() {
+        if (!this.currentPuzzle) return;
+
+        try {
+            this.showNotification('Создание PNG контуров...');
+            const blob = await ExportUtils.exportPNGCutLines(this.currentPuzzle, 3);
+            ExportUtils.downloadBlob(blob, `puzzle-cutlines-${this.getTimestamp()}.png`);
+            this.showNotification('PNG контуров скачан!');
+        } catch (error) {
+            console.error('Cut lines export error:', error);
+            this.showNotification('Ошибка экспорта контуров: ' + error.message, 'error');
+        }
     }
 
     showNotification(message, type = 'success') {
-        // Create notification element
+        // Remove existing notifications
+        const existing = document.querySelector('.notification');
+        if (existing) {
+            existing.remove();
+        }
+
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
 
-        // Style notification
         Object.assign(notification.style, {
             position: 'fixed',
             top: '20px',
@@ -193,21 +311,21 @@ class PuzzleApp {
             background: type === 'success' ? '#28a745' : '#dc3545',
             color: 'white',
             borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
             zIndex: '10000',
             fontWeight: '600',
-            maxWidth: '300px',
+            maxWidth: '350px',
             animation: 'slideIn 0.3s ease-out'
         });
 
-        // Add to document
         document.body.appendChild(notification);
 
-        // Remove after 3 seconds
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-out';
             setTimeout(() => {
-                document.body.removeChild(notification);
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
             }, 300);
         }, 3000);
     }

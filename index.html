@@ -9,87 +9,199 @@
 <body>
     <div class="container">
         <header>
-            <h1>🧩 Генератор Пазлов</h1>
+            <h1>Генератор Пазлов</h1>
             <p>Создайте пазлы для печати и вырезания на ЧПУ</p>
         </header>
 
-        <div class="controls-panel">
-            <div class="control-group">
-                <label for="imageUpload">📁 Загрузить изображение:</label>
-                <input type="file" id="imageUpload" accept="image/*">
+        <div class="main-content">
+            <!-- Left Panel - Controls -->
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>Загрузка изображения</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="imageUpload" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <div class="upload-icon">+</div>
+                            <p>Нажмите или перетащите изображение</p>
+                            <span class="upload-hint">JPG, PNG, GIF до 10MB</span>
+                        </div>
+                        <img id="imagePreview" class="image-preview" alt="Preview">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Форма пазла</h3>
+                    <div class="shape-selector">
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="rectangular" checked>
+                            <div class="shape-card">
+                                <div class="shape-icon rectangular-icon"></div>
+                                <span>Прямоугольный</span>
+                            </div>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="square">
+                            <div class="shape-card">
+                                <div class="shape-icon square-icon"></div>
+                                <span>Квадратный</span>
+                            </div>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="circular">
+                            <div class="shape-card">
+                                <div class="shape-icon circular-icon"></div>
+                                <span>Круговой</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Тип элементов</h3>
+                    <div class="piece-type-selector">
+                        <label class="piece-type-option">
+                            <input type="radio" name="pieceType" value="classic" checked>
+                            <div class="piece-type-card">
+                                <svg class="piece-type-icon" viewBox="0 0 60 60">
+                                    <path d="M5 15 L20 15 Q25 5 30 15 L40 15 Q45 5 50 15 L55 15 L55 25 Q65 30 55 35 L55 45 L40 45 Q35 55 30 45 L20 45 Q15 55 10 45 L5 45 L5 35 Q-5 30 5 25 Z"
+                                          fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                <span>Классический</span>
+                                <small>С замками</small>
+                            </div>
+                        </label>
+                        <label class="piece-type-option">
+                            <input type="radio" name="pieceType" value="grid">
+                            <div class="piece-type-card">
+                                <svg class="piece-type-icon" viewBox="0 0 60 60">
+                                    <rect x="5" y="5" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="33" y="5" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="5" y="33" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="33" y="33" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                <span>Квадратики</span>
+                                <small>Простая сетка</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Сложность</h3>
+                    <div class="difficulty-control">
+                        <input type="range" id="difficultySlider" min="1" max="10" value="3" class="difficulty-slider">
+                        <div class="difficulty-labels">
+                            <span>Легко</span>
+                            <span>Сложно</span>
+                        </div>
+                        <div class="pieces-info">
+                            <span class="pieces-count" id="piecesCount">12</span>
+                            <span class="pieces-label">частей</span>
+                            <span class="pieces-grid" id="piecesGrid">(4 × 3)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Размер бумаги</h3>
+                    <div class="paper-selector">
+                        <label class="paper-option">
+                            <input type="radio" name="paperSize" value="a4" checked>
+                            <div class="paper-card">
+                                <span class="paper-name">A4</span>
+                                <span class="paper-size">297×210 мм</span>
+                            </div>
+                        </label>
+                        <label class="paper-option">
+                            <input type="radio" name="paperSize" value="a3">
+                            <div class="paper-card">
+                                <span class="paper-name">A3</span>
+                                <span class="paper-size">420×297 мм</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Дополнительно</h3>
+                    <div class="control-row">
+                        <label for="margin">Отступы (мм):</label>
+                        <input type="number" id="margin" min="0" max="30" value="10" class="number-input">
+                    </div>
+                    <div class="control-row">
+                        <label for="lineWidth">Толщина линий:</label>
+                        <input type="number" id="lineWidth" min="0.5" max="3" step="0.1" value="0.5" class="number-input">
+                        <span class="unit">мм</span>
+                    </div>
+                </div>
+
+                <button id="generateBtn" class="btn-primary">
+                    <span class="btn-icon">&#9881;</span>
+                    Генерировать пазл
+                </button>
             </div>
 
-            <div class="control-group">
-                <label for="puzzleShape">🔷 Форма элементов:</label>
-                <select id="puzzleShape">
-                    <option value="classic">Классические (с замками)</option>
-                    <option value="square">Квадратики (простые)</option>
-                </select>
+            <!-- Right Panel - Preview -->
+            <div class="preview-panel">
+                <div class="preview-header">
+                    <h2>Предварительный просмотр</h2>
+                    <div class="preview-info" id="previewInfo"></div>
+                </div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-placeholder">
+                        <p>Загрузите изображение и нажмите "Генерировать пазл"</p>
+                    </div>
+                </div>
             </div>
-
-            <div class="control-group">
-                <label for="difficulty">⚙️ Сложность:</label>
-                <select id="difficulty">
-                    <option value="easy">Легко (6 частей)</option>
-                    <option value="medium">Средне (12 частей)</option>
-                    <option value="hard">Сложно (24 части)</option>
-                    <option value="expert">Эксперт (48 частей)</option>
-                    <option value="custom">Своё количество</option>
-                </select>
-            </div>
-
-            <div class="control-group" id="customPiecesGroup" style="display: none;">
-                <label for="piecesX">Колонки:</label>
-                <input type="number" id="piecesX" min="2" max="20" value="4">
-                <label for="piecesY">Строки:</label>
-                <input type="number" id="piecesY" min="2" max="20" value="3">
-            </div>
-
-            <div class="control-group">
-                <label for="paperSize">📄 Размер бумаги:</label>
-                <select id="paperSize">
-                    <option value="a4">A4 (297×210 мм)</option>
-                    <option value="a3">A3 (420×297 мм)</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="orientation">🔄 Ориентация:</label>
-                <select id="orientation">
-                    <option value="landscape">Горизонтальная (альбомная)</option>
-                    <option value="portrait">Вертикальная (книжная)</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="margin">🖼️ Отступы (мм):</label>
-                <input type="number" id="margin" min="0" max="50" value="10">
-            </div>
-
-            <button id="generateBtn" class="btn-primary">🎨 Генерировать пазл</button>
         </div>
 
-        <div class="preview-panel">
-            <h2>Предварительный просмотр</h2>
-            <div id="previewCanvas"></div>
-        </div>
-
+        <!-- Export Panel -->
         <div class="export-panel">
             <h2>Экспорт</h2>
             <div class="export-buttons">
-                <button id="exportSVG" class="btn-export" disabled>⬇️ Скачать SVG (вектор)</button>
-                <button id="exportPNG" class="btn-export" disabled>⬇️ Скачать PNG (печать)</button>
-                <button id="exportDXF" class="btn-export" disabled>⬇️ Скачать DXF (ЧПУ)</button>
+                <button id="exportPNG" class="btn-export btn-png" disabled>
+                    <span class="export-icon">&#128190;</span>
+                    <div class="export-text">
+                        <span class="export-title">PNG с изображением</span>
+                        <span class="export-desc">Для печати макета</span>
+                    </div>
+                </button>
+                <button id="exportSVG" class="btn-export btn-svg" disabled>
+                    <span class="export-icon">&#128196;</span>
+                    <div class="export-text">
+                        <span class="export-title">SVG (вектор)</span>
+                        <span class="export-desc">Для редактирования</span>
+                    </div>
+                </button>
+                <button id="exportDXF" class="btn-export btn-dxf" disabled>
+                    <span class="export-icon">&#9881;</span>
+                    <div class="export-text">
+                        <span class="export-title">DXF для ЧПУ</span>
+                        <span class="export-desc">RDWorks, LaserCut</span>
+                    </div>
+                </button>
+                <button id="exportCutLines" class="btn-export btn-cutlines" disabled>
+                    <span class="export-icon">&#9986;</span>
+                    <div class="export-text">
+                        <span class="export-title">PNG контуров</span>
+                        <span class="export-desc">Только линии резки</span>
+                    </div>
+                </button>
             </div>
             <div class="info-panel">
-                <p>💡 <strong>Инструкция:</strong></p>
+                <p><strong>Инструкция по использованию:</strong></p>
                 <ul>
-                    <li><strong>SVG</strong> - векторный формат для редактирования</li>
-                    <li><strong>PNG</strong> - для печати макета на бумаге</li>
-                    <li><strong>DXF</strong> - для вырезания на ЧПУ (RDWorks)</li>
+                    <li><strong>PNG с изображением</strong> - распечатайте на бумаге и приклейте к фанере</li>
+                    <li><strong>SVG</strong> - редактируйте в Inkscape, CorelDRAW или Illustrator</li>
+                    <li><strong>DXF</strong> - загрузите в RDWorks или LaserCut для вырезания на ЧПУ</li>
+                    <li><strong>PNG контуров</strong> - только линии для резки без изображения</li>
                 </ul>
             </div>
         </div>
+
+        <footer>
+            <p>Puzzle Generator - Создавайте пазлы для печати и ЧПУ</p>
+        </footer>
     </div>
 
     <script src="puzzle-generator.js"></script>
