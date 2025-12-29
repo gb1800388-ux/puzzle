@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Puzzle Generator - Jigsaw Style</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --surface: #ffffff;
+            --bg-app: #f1f5f9;
+            --border: #cbd5e1;
+            --text-main: #0f172a;
+            --text-sec: #64748b;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        body {
+            background: var(--bg-app);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .brand {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Layout */
+        main {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Controls */
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .label { font-size: 0.8rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Upload */
+        .upload-box {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: var(--bg-app);
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-box:hover { border-color: var(--primary); background: #eff6ff; }
+        .upload-box input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .preview-img { max-width: 100%; max-height: 120px; display: none; margin: 0 auto; border-radius: 4px; box-shadow: var(--shadow); }
+
+        /* Radio Cards */
+        .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .card { position: relative; }
+        .card input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .card-content {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-sec);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .card input:checked + .card-content { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+        /* Inputs */
+        input[type="range"] { width: 100%; accent-color: var(--primary); margin: 10px 0; }
+        input[type="number"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.85rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: 0.2s;
+        }
+        .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+
+        /* Workspace */
+        .workspace {
+            background: #e2e8f0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 2rem;
+            background-image:
+                linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+                linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+                linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        canvas {
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Floating Actions */
+        .actions {
+            position: absolute; bottom: 2rem; right: 2rem;
+            background: var(--surface);
+            padding: 0.5rem;
+            border-radius: 12px;
+            display: flex; gap: 0.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+        }
+
+        .icon-btn {
+            width: 48px; height: 48px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-sec);
+            transition: 0.2s;
+            position: relative;
+        }
+        .icon-btn:hover:not(:disabled) { color: var(--primary); border-color: var(--primary); background: #eff6ff; }
+        .icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Tooltip */
+        .icon-btn::after {
+            content: attr(data-tooltip);
+            position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: white; padding: 5px 10px;
+            border-radius: 4px; font-size: 0.75rem; white-space: nowrap;
+            opacity: 0; pointer-events: none; transition: 0.2s;
+        }
+        .icon-btn:hover::after { opacity: 1; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            background: #1e293b; color: white; padding: 0.75rem 1.5rem;
+            border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            font-weight: 500; z-index: 100;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 900px) {
+            main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            aside { max-height: 40vh; border-bottom: 1px solid var(--border); }
+            .actions { bottom: 1rem; right: 1rem; flex-wrap: wrap; width: calc(100% - 2rem); justify-content: center;}
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19.439 15.424a2.252 2.252 0 0 1-1.914-1.034l-1.864-2.968a2.252 2.252 0 0 0-1.914-1.034h-1.874a2.252 2.252 0 0 0-1.914 1.034l-1.864 2.968a2.252 2.252 0 0 1-1.914 1.034h-.005"/>
+            <path d="M12 3v3"/><path d="M3 12h3"/><path d="M12 21v-3"/><path d="M21 12h-3"/>
+        </svg>
+        Pro Puzzle Generator
+    </div>
+    <div style="font-size:0.8rem; color:var(--text-sec);">Для печати и ЧПУ резки</div>
+</header>
+
+<main>
+    <aside>
+        <div class="control-group">
+            <div class="label">1. Изображение</div>
+            <div class="upload-box" id="dropZone">
+                <input type="file" id="fileInput" accept="image/*">
+                <div id="uploadPlaceholder">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <div style="margin-top:8px; font-size:0.9rem;">Нажмите или перетащите</div>
+                </div>
+                <img id="imagePreview" class="preview-img" alt="">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="label">2. Формат бумаги (Горизонт)</div>
+            <div class="cards">
+                <div class="card">
+                    <input type="radio" name="paper" value="a4" checked>
+                    <div class="card-content">A4<br><small style="font-size:0.7em; font-weight:400;">297×210</small></div>
+                </div>
+                <div class="card">
+                    <input type="radio" name="paper" value="a3">
+                    <div class="card-content">A3<br><small style="font-size:0.7em; font-weight:400;">420×297</small></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="label">3. Тип пазла</div>
+            <div class="cards">
+                <div class="card">
+                    <input type="radio" name="type" value="classic" checked>
+                    <div class="card-content">🧩 Классика</div>
+                </div>
+                <div class="card">
+                    <input type="radio" name="type" value="square">
+                    <div class="card-content">⬜ Квадраты</div>
+                </div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-sec);">Классика: форма как на JigsawPlanet</div>
+        </div>
+
+        <div class="control-group">
+            <div class="label">4. Сложность (Деталей)</div>
+            <input type="range" id="difficulty" min="1" max="10" value="5">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-sec);">
+                <span>Легко</span>
+                <span id="piecesCount" style="font-weight:700; color:var(--primary);">~96 шт</span>
+                <span>Сложно</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="label">5. Настройки реза</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>
+                    <label style="font-size:0.75rem;">Отступ (мм)</label>
+                    <input type="number" id="bleed" value="5" min="0">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;">Толщина линии</label>
+                    <input type="number" id="strokeWidth" value="1.5" step="0.5" min="0.5">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn" id="btnGenerate" style="margin-top:auto;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            Сгенерировать макет
+        </button>
+    </aside>
+
+    <div class="workspace">
+        <canvas id="canvas"></canvas>
+    </div>
+</main>
+
+<div class="actions">
+    <button class="icon-btn" id="btnPrint" disabled data-tooltip="Скачать PNG (Фото + Линии)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+    </button>
+    <button class="icon-btn" id="btnCut" disabled data-tooltip="Скачать PNG (Только линии)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+    </button>
+    <button class="icon-btn" id="btnDXF" disabled data-tooltip="Скачать DXF для ЧПУ">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+    </button>
+    <button class="icon-btn" id="btnSVG" disabled data-tooltip="Скачать SVG Вектор">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
+</div>
+
+<div id="toast" class="toast">Сообщение</div>
+
+<script>
+/**
+ * PRO PUZZLE GENERATOR v3
+ * -----------------------
+ * Features:
+ * - Jigsaw-style tab generation (Bezier curves)
+ * - Grid calculation respecting aspect ratio
+ * - DXF Polyline export for CNC
+ * - Canvas rendering with masking
+ */
+
+const CONFIG = {
+    DPI: 96,
+    MM_TO_PX: 96 / 25.4,
+    PAPER: {
+        a4: { w: 297, h: 210 },
+        a3: { w: 420, h: 297 }
+    },
+    DIFFICULTY_MAP: [4, 12, 24, 48, 96, 150, 224, 320, 450, 600]
+};
+
+class PuzzleApp {
+    constructor() {
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.state = {
+            image: null,
+            paper: 'a4',
+            type: 'classic',
+            difficulty: 5,
+            bleed: 5,
+            strokeWidth: 1.5
+        };
+
+        this.pieces = [];
+        this.imgBounds = { x:0, y:0, w:0, h:0 };
+        this.grid = { rows:0, cols:0 };
+        this.seed = Date.now();
+
+        this.initListeners();
+        this.updatePiecesLabel();
+    }
+
+    initListeners() {
+        // File Upload
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (e) => this.handleFile(e.target.files[0]));
+
+        // Drag & Drop
+        const dz = document.getElementById('dropZone');
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.style.borderColor = 'var(--primary)'; });
+        dz.addEventListener('dragleave', (e) => { e.preventDefault(); dz.style.borderColor = ''; });
+        dz.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dz.style.borderColor = '';
+            if(e.dataTransfer.files[0]) this.handleFile(e.dataTransfer.files[0]);
+        });
+
+        // Controls
+        document.querySelectorAll('input[name="paper"]').forEach(el =>
+            el.addEventListener('change', (e) => { this.state.paper = e.target.value; this.update(); })
+        );
+        document.querySelectorAll('input[name="type"]').forEach(el =>
+            el.addEventListener('change', (e) => { this.state.type = e.target.value; this.update(); })
+        );
+
+        const diffSlider = document.getElementById('difficulty');
+        diffSlider.addEventListener('input', (e) => {
+            this.state.difficulty = parseInt(e.target.value);
+            this.updatePiecesLabel();
+        });
+        diffSlider.addEventListener('change', () => this.update());
+
+        document.getElementById('bleed').addEventListener('change', (e) => {
+            this.state.bleed = parseFloat(e.target.value) || 5;
+            this.update();
+        });
+
+        document.getElementById('strokeWidth').addEventListener('change', (e) => {
+            this.state.strokeWidth = parseFloat(e.target.value) || 1.5;
+            this.render();
+        });
+
+        // Actions
+        document.getElementById('btnGenerate').addEventListener('click', () => this.generate());
+        document.getElementById('btnPrint').addEventListener('click', () => this.downloadPNG('print'));
+        document.getElementById('btnCut').addEventListener('click', () => this.downloadPNG('cut'));
+        document.getElementById('btnSVG').addEventListener('click', () => this.downloadSVG());
+        document.getElementById('btnDXF').addEventListener('click', () => this.downloadDXF());
+    }
+
+    updatePiecesLabel() {
+        document.getElementById('piecesCount').innerText = `~${CONFIG.DIFFICULTY_MAP[this.state.difficulty-1]} шт`;
+    }
+
+    handleFile(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                this.state.image = img;
+                document.getElementById('imagePreview').src = img.src;
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('uploadPlaceholder').style.display = 'none';
+                this.showToast('Фото загружено');
+                this.generate();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    random() {
+        const x = Math.sin(this.seed++) * 10000;
+        return x - Math.floor(x);
+    }
+
+    update() {
+        if(this.state.image) this.generate();
+    }
+
+    generate() {
+        if(!this.state.image) return;
+
+        this.seed = Date.now();
+        const paperSize = CONFIG.PAPER[this.state.paper];
+        const pxPerMm = CONFIG.MM_TO_PX;
+
+        this.canvas.width = paperSize.w * pxPerMm;
+        this.canvas.height = paperSize.h * pxPerMm;
+
+        const bleedPx = this.state.bleed * pxPerMm;
+        const availW = this.canvas.width - (bleedPx * 2);
+        const availH = this.canvas.height - (bleedPx * 2);
+
+        const imgAspect = this.state.image.width / this.state.image.height;
+        const areaAspect = availW / availH;
+
+        if (imgAspect > areaAspect) {
+            this.imgBounds.w = availW;
+            this.imgBounds.h = availW / imgAspect;
+        } else {
+            this.imgBounds.h = availH;
+            this.imgBounds.w = availH * imgAspect;
+        }
+
+        this.imgBounds.x = (this.canvas.width - this.imgBounds.w) / 2;
+        this.imgBounds.y = (this.canvas.height - this.imgBounds.h) / 2;
+
+        this.calculateGrid();
+        this.createPaths();
+        this.render();
+
+        document.querySelectorAll('.icon-btn').forEach(b => b.disabled = false);
+    }
+
+    calculateGrid() {
+        const target = CONFIG.DIFFICULTY_MAP[this.state.difficulty - 1];
+        const aspect = this.imgBounds.w / this.imgBounds.h;
+
+        let rows = Math.round(Math.sqrt(target / aspect));
+        let cols = Math.round(target / rows);
+
+        if (rows < 2) rows = 2;
+        if (cols < 2) cols = 2;
+
+        this.grid = { rows, cols };
+    }
+
+    createPaths() {
+        this.pieces = [];
+        const { rows, cols } = this.grid;
+        const { x, y, w, h } = this.imgBounds;
+        const pW = w / cols;
+        const pH = h / rows;
+
+        const hTabs = Array(rows).fill(0).map(() => Array(cols).fill(0));
+        const vTabs = Array(rows).fill(0).map(() => Array(cols).fill(0));
+
+        if (this.state.type === 'classic') {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (r < rows - 1) hTabs[r][c] = this.random() > 0.5 ? 1 : -1;
+                    if (c < cols - 1) vTabs[r][c] = this.random() > 0.5 ? 1 : -1;
+                }
+            }
+        }
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const px = x + c * pW;
+                const py = y + r * pH;
+
+                const top = (r === 0) ? 0 : -hTabs[r-1][c];
+                const right = (c === cols-1) ? 0 : vTabs[r][c];
+                const bottom = (r === rows-1) ? 0 : hTabs[r][c];
+                const left = (c === 0) ? 0 : -vTabs[r][c-1];
+
+                const path = this.buildPiecePath(px, py, pW, pH, top, right, bottom, left);
+                this.pieces.push(path);
+            }
+        }
+    }
+
+    buildPiecePath(x, y, w, h, top, right, bottom, left) {
+        let d = `M ${x} ${y}`;
+        d += this.getEdge(x, y, x+w, y, top, true);
+        d += this.getEdge(x+w, y, x+w, y+h, right, false);
+        d += this.getEdge(x+w, y+h, x, y+h, bottom, true);
+        d += this.getEdge(x, y+h, x, y, left, false);
+        d += ' Z';
+        return d;
+    }
+
+    getEdge(x1, y1, x2, y2, type, horizontal) {
+        if (type === 0 || this.state.type === 'square') return ` L ${x2} ${y2}`;
+
+        const len = Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2-y1, 2));
+        const neck = len * 0.22;
+        const head = len * 0.18;
+        const sign = type;
+
+        let d = '';
+
+        if (horizontal) {
+            const mid = (x1 + x2) / 2;
+            const s = mid - neck/2;
+            const e = mid + neck/2;
+
+            d += ` L ${s} ${y1}`;
+            d += ` C ${s + neck*0.1} ${y1}, ${mid - neck*0.4} ${y1 + head*0.3*sign}, ${mid - neck*0.3} ${y1 + head*0.8*sign}`;
+            d += ` C ${mid} ${y1 + head*1.4*sign}, ${mid} ${y1 + head*1.4*sign}, ${mid + neck*0.3} ${y1 + head*0.8*sign}`;
+            d += ` C ${mid + neck*0.4} ${y1 + head*0.3*sign}, ${e - neck*0.1} ${y1}, ${e} ${y1}`;
+            d += ` L ${x2} ${y2}`;
+        } else {
+            const mid = (y1 + y2) / 2;
+            const s = mid - neck/2;
+            const e = mid + neck/2;
+
+            d += ` L ${x1} ${s}`;
+            d += ` C ${x1} ${s + neck*0.1}, ${x1 + head*0.3*sign} ${mid - neck*0.4}, ${x1 + head*0.8*sign} ${mid - neck*0.3}`;
+            d += ` C ${x1 + head*1.4*sign} ${mid}, ${x1 + head*1.4*sign} ${mid}, ${x1 + head*0.8*sign} ${mid + neck*0.3}`;
+            d += ` C ${x1 + head*0.3*sign} ${mid + neck*0.4}, ${x1} ${e - neck*0.1}, ${x1} ${e}`;
+            d += ` L ${x2} ${y2}`;
+        }
+        return d;
+    }
+
+    render() {
+        const { width, height } = this.canvas;
+        this.ctx.clearRect(0, 0, width, height);
+
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillRect(0, 0, width, height);
+
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        this.ctx.clip();
+        this.ctx.drawImage(this.state.image, this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        this.ctx.restore();
+
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = this.state.strokeWidth;
+        this.ctx.lineJoin = 'round';
+        this.ctx.lineCap = 'round';
+
+        this.pieces.forEach(p => {
+            this.ctx.stroke(new Path2D(p));
+        });
+
+        this.ctx.lineWidth = this.state.strokeWidth * 1.5;
+        this.ctx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+    }
+
+    // --- EXPORTS ---
+
+    downloadPNG(mode) {
+        const tmpC = document.createElement('canvas');
+        tmpC.width = this.canvas.width * 2; // 2x resolution
+        tmpC.height = this.canvas.height * 2;
+        const tCtx = tmpC.getContext('2d');
+        tCtx.scale(2, 2);
+
+        if (mode === 'cut') {
+            tCtx.fillStyle = '#fff';
+            tCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            tCtx.strokeStyle = '#000';
+            tCtx.lineWidth = this.state.strokeWidth;
+            tCtx.lineJoin = 'round';
+            tCtx.lineCap = 'round';
+
+            this.pieces.forEach(p => tCtx.stroke(new Path2D(p)));
+            tCtx.lineWidth = this.state.strokeWidth * 1.5;
+            tCtx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        } else {
+            tCtx.fillStyle = '#fff';
+            tCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            tCtx.save();
+            tCtx.beginPath();
+            tCtx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            tCtx.clip();
+            tCtx.drawImage(this.state.image, this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            tCtx.restore();
+
+            tCtx.strokeStyle = '#000';
+            tCtx.lineWidth = this.state.strokeWidth;
+            tCtx.lineJoin = 'round';
+            tCtx.lineCap = 'round';
+
+            this.pieces.forEach(p => tCtx.stroke(new Path2D(p)));
+            tCtx.lineWidth = this.state.strokeWidth * 1.5;
+            tCtx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        }
+
+        tmpC.toBlob(blob => {
+            const link = document.createElement('a');
+            link.download = `puzzle-${mode}-${Date.now()}.png`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            this.showToast('PNG скачан!');
+        }, 'image/png');
+    }
+
+    downloadSVG() {
+        const { width, height } = this.canvas;
+        const b = this.imgBounds;
+
+        let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <defs>
+        <clipPath id="imgClip">
+            <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/>
+        </clipPath>
+    </defs>
+    <rect width="100%" height="100%" fill="white"/>
+    <image xlink:href="${this.state.image.src}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" clip-path="url(#imgClip)"/>
+    <g fill="none" stroke="#000" stroke-width="${this.state.strokeWidth}" stroke-linejoin="round" stroke-linecap="round">
+`;
+        this.pieces.forEach(p => svg += `        <path d="${p}"/>\n`);
+        svg += `        <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" stroke-width="${this.state.strokeWidth*1.5}"/>
+    </g>
+</svg>`;
+
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        const link = document.createElement('a');
+        link.download = `puzzle-${Date.now()}.svg`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        this.showToast('SVG скачан!');
+    }
+
+    downloadDXF() {
+        const scale = 25.4 / CONFIG.DPI; // px to mm
+        const hMM = this.canvas.height * scale;
+
+        // DXF Header
+        let dxf = `0\nSECTION\n2\nHEADER\n`;
+        dxf += `9\n$ACADVER\n1\nAC1015\n`;
+        dxf += `9\n$INSUNITS\n70\n4\n`;
+        dxf += `0\nENDSEC\n`;
+
+        // Tables
+        dxf += `0\nSECTION\n2\nTABLES\n`;
+        dxf += `0\nTABLE\n2\nLTYPE\n70\n1\n`;
+        dxf += `0\nLTYPE\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n`;
+        dxf += `0\nENDTAB\n`;
+        dxf += `0\nTABLE\n2\nLAYER\n70\n1\n`;
+        dxf += `0\nLAYER\n2\nCUT\n70\n0\n62\n1\n6\nCONTINUOUS\n`;
+        dxf += `0\nENDTAB\n`;
+        dxf += `0\nENDSEC\n`;
+
+        // Entities
+        dxf += `0\nSECTION\n2\nENTITIES\n`;
+
+        const pathToDXF = (pathStr) => {
+            const points = this.pathToPoints(pathStr);
+            if (points.length < 2) return '';
+
+            let out = `0\nLWPOLYLINE\n8\nCUT\n90\n${points.length}\n70\n1\n`;
+            points.forEach(p => {
+                const xMM = p.x * scale;
+                const yMM = hMM - (p.y * scale);
+                out += `10\n${xMM.toFixed(4)}\n20\n${yMM.toFixed(4)}\n`;
+            });
+            return out;
+        };
+
+        this.pieces.forEach(p => { dxf += pathToDXF(p); });
+
+        // Border
+        const b = this.imgBounds;
+        const borderPath = `M ${b.x} ${b.y} L ${b.x+b.w} ${b.y} L ${b.x+b.w} ${b.y+b.h} L ${b.x} ${b.y+b.h} Z`;
+        dxf += pathToDXF(borderPath);
+
+        dxf += `0\nENDSEC\n0\nEOF\n`;
+
+        const blob = new Blob([dxf], { type: 'application/dxf' });
+        const link = document.createElement('a');
+        link.download = `puzzle-cnc-${Date.now()}.dxf`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        this.showToast('DXF для ЧПУ скачан!');
+    }
+
+    pathToPoints(pathStr) {
+        const points = [];
+        const cmds = pathStr.match(/[MLCZ][^MLCZ]*/gi) || [];
+        let cx = 0, cy = 0;
+
+        cmds.forEach(cmd => {
+            const type = cmd[0].toUpperCase();
+            const vals = cmd.slice(1).trim().split(/[\s,]+/).filter(v => v).map(parseFloat);
+
+            if (type === 'M' || type === 'L') {
+                cx = vals[0];
+                cy = vals[1];
+                points.push({ x: cx, y: cy });
+            } else if (type === 'C') {
+                const cp1x = vals[0], cp1y = vals[1];
+                const cp2x = vals[2], cp2y = vals[3];
+                const ex = vals[4], ey = vals[5];
+
+                // Bezier approximation with 10 points
+                for (let t = 0.1; t <= 1; t += 0.1) {
+                    const t2 = t * t, t3 = t2 * t;
+                    const mt = 1 - t, mt2 = mt * mt, mt3 = mt2 * mt;
+                    points.push({
+                        x: mt3 * cx + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * ex,
+                        y: mt3 * cy + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * ey
+                    });
+                }
+                cx = ex;
+                cy = ey;
+            }
+        });
+
+        return points;
+    }
+
+    showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    window.puzzleApp = new PuzzleApp();
+});
+</script>
+</body>
+</html>
