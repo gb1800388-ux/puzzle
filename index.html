@@ -20,11 +20,10 @@
             </div>
 
             <div class="control-group">
-                <label for="puzzleShape">🔷 Форма пазла:</label>
+                <label for="puzzleShape">🔷 Форма элементов:</label>
                 <select id="puzzleShape">
-                    <option value="rectangular">Прямоугольная</option>
-                    <option value="square">Квадратная</option>
-                    <option value="circular">Круговая</option>
+                    <option value="classic">Классические (с замками)</option>
+                    <option value="square">Квадратики (простые)</option>
                 </select>
             </div>
 
@@ -49,8 +48,16 @@
             <div class="control-group">
                 <label for="paperSize">📄 Размер бумаги:</label>
                 <select id="paperSize">
-                    <option value="a4">A4 (210×297 мм)</option>
-                    <option value="a3">A3 (297×420 мм)</option>
+                    <option value="a4">A4 (297×210 мм)</option>
+                    <option value="a3">A3 (420×297 мм)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="orientation">🔄 Ориентация:</label>
+                <select id="orientation">
+                    <option value="landscape">Горизонтальная (альбомная)</option>
+                    <option value="portrait">Вертикальная (книжная)</option>
                 </select>
             </div>
 
