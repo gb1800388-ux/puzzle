@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор Пазлов - Puzzle Generator</title>
+    <style>
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+/* Header */
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px 30px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+header p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Main Content Layout */
+.main-content {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 600px;
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Controls Panel */
+.controls-panel {
+    background: #f8f9fa;
+    padding: 20px;
+    border-right: 1px solid #e9ecef;
+    overflow-y: auto;
+    max-height: 700px;
+}
+
+.control-section {
+    margin-bottom: 24px;
+}
+
+.control-section h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Upload Area */
+.upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    position: relative;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.upload-placeholder {
+    color: #6c757d;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.upload-placeholder p {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.upload-hint {
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 8px;
+    display: none;
+}
+
+/* Shape Selector */
+.shape-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.shape-option input {
+    display: none;
+}
+
+.shape-card {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shape-option input:checked + .shape-card {
+    border-color: #667eea;
+    background: #f0f4ff;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.shape-card:hover {
+    border-color: #adb5bd;
+}
+
+.shape-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 8px;
+    border: 2px solid #667eea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rectangular-icon {
+    border-radius: 4px;
+    width: 48px;
+    height: 32px;
+}
+
+.square-icon {
+    border-radius: 4px;
+    width: 36px;
+    height: 36px;
+}
+
+.circular-icon {
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+}
+
+.shape-card span {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Piece Type Selector */
+.piece-type-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.piece-type-option input {
+    display: none;
+}
+
+.piece-type-card {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 15px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.piece-type-option input:checked + .piece-type-card {
+    border-color: #667eea;
+    background: #f0f4ff;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.piece-type-card:hover {
+    border-color: #adb5bd;
+}
+
+.piece-type-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 8px;
+    color: #667eea;
+}
+
+.piece-type-card span {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.piece-type-card small {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+/* Difficulty Control */
+.difficulty-control {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+}
+
+.difficulty-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, #28a745, #ffc107, #dc3545);
+    border-radius: 4px;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.difficulty-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.difficulty-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 12px;
+}
+
+.pieces-info {
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+}
+
+.pieces-count {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.pieces-label {
+    font-size: 0.9rem;
+    color: #495057;
+    margin-left: 5px;
+}
+
+.pieces-grid {
+    display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+/* Paper Selector */
+.paper-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.paper-option input {
+    display: none;
+}
+
+.paper-card {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.paper-option input:checked + .paper-card {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.paper-card:hover {
+    border-color: #adb5bd;
+}
+
+.paper-name {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #495057;
+}
+
+.paper-size {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+/* Control Row */
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.control-row label {
+    font-size: 0.9rem;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.number-input {
+    width: 80px;
+    padding: 8px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.number-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.unit {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Checkbox */
+.checkbox-row {
+    margin-bottom: 15px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 10px 12px;
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.checkbox-label:hover {
+    border-color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #667eea;
+    cursor: pointer;
+}
+
+.checkbox-text {
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Generate Button */
+.btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-icon {
+    font-size: 1.3rem;
+}
+
+/* Preview Panel */
+.preview-panel {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.preview-header h2 {
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.preview-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.preview-info span {
+    margin: 0 5px;
+}
+
+.preview-container {
+    flex: 1;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    overflow: hidden;
+    padding: 20px;
+}
+
+.preview-placeholder {
+    color: #adb5bd;
+    text-align: center;
+}
+
+.preview-placeholder p {
+    font-size: 1rem;
+}
+
+.preview-container svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Export Panel */
+.export-panel {
+    padding: 25px 30px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.export-panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.export-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn-export {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.btn-export:hover:not(:disabled) {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-export:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.export-icon {
+    font-size: 1.5rem;
+    color: #667eea;
+}
+
+.export-text {
+    flex: 1;
+}
+
+.export-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.export-desc {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.btn-png .export-icon { color: #28a745; }
+.btn-svg .export-icon { color: #667eea; }
+.btn-dxf .export-icon { color: #dc3545; }
+.btn-cutlines .export-icon { color: #fd7e14; }
+
+/* Info Panel */
+.info-panel {
+    background: white;
+    padding: 18px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.info-panel p {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.info-panel ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.info-panel li {
+    margin: 8px 0;
+    color: #555;
+    font-size: 0.85rem;
+    padding-left: 15px;
+    position: relative;
+}
+
+.info-panel li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+}
+
+.info-panel strong {
+    color: #667eea;
+}
+
+/* Footer */
+footer {
+    background: #333;
+    color: #adb5bd;
+    padding: 15px 30px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .controls-panel {
+        max-height: none;
+    }
+
+    .shape-selector {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .export-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Scrollbar */
+.controls-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.controls-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.controls-panel::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.controls-panel::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Генератор Пазлов</h1>
+            <p>Создайте пазлы для печати и вырезания на ЧПУ</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel - Controls -->
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>Загрузка изображения</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="imageUpload" accept="image/*" hidden>
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <div class="upload-icon">+</div>
+                            <p>Нажмите или перетащите изображение</p>
+                            <span class="upload-hint">JPG, PNG, GIF до 10MB</span>
+                        </div>
+                        <img id="imagePreview" class="image-preview" alt="Preview">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Форма пазла</h3>
+                    <div class="shape-selector">
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="rectangular" checked>
+                            <div class="shape-card">
+                                <div class="shape-icon rectangular-icon"></div>
+                                <span>Прямоугольный</span>
+                            </div>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="square">
+                            <div class="shape-card">
+                                <div class="shape-icon square-icon"></div>
+                                <span>Квадратный</span>
+                            </div>
+                        </label>
+                        <label class="shape-option">
+                            <input type="radio" name="puzzleForm" value="circular">
+                            <div class="shape-card">
+                                <div class="shape-icon circular-icon"></div>
+                                <span>Круговой</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Тип элементов</h3>
+                    <div class="piece-type-selector">
+                        <label class="piece-type-option">
+                            <input type="radio" name="pieceType" value="classic" checked>
+                            <div class="piece-type-card">
+                                <svg class="piece-type-icon" viewBox="0 0 60 60">
+                                    <path d="M5 10 L22 10 L22 10 L22 5 C22 0 28 0 28 5 L28 10 L38 10 L38 5 C38 0 44 0 44 5 L44 10 L55 10 L55 22 L60 22 C65 22 65 28 60 28 L55 28 L55 38 L60 38 C65 38 65 44 60 44 L55 44 L55 55 L44 55 L44 60 C44 65 38 65 38 60 L38 55 L28 55 L28 60 C28 65 22 65 22 60 L22 55 L5 55 L5 44 L0 44 C-5 44 -5 38 0 38 L5 38 L5 28 L0 28 C-5 28 -5 22 0 22 L5 22 Z"
+                                          fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                <span>Классический</span>
+                                <small>С замками</small>
+                            </div>
+                        </label>
+                        <label class="piece-type-option">
+                            <input type="radio" name="pieceType" value="grid">
+                            <div class="piece-type-card">
+                                <svg class="piece-type-icon" viewBox="0 0 60 60">
+                                    <rect x="5" y="5" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="33" y="5" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="5" y="33" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <rect x="33" y="33" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                <span>Квадратики</span>
+                                <small>Простая сетка</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Сложность</h3>
+                    <div class="difficulty-control">
+                        <input type="range" id="difficultySlider" min="1" max="10" value="3" class="difficulty-slider">
+                        <div class="difficulty-labels">
+                            <span>Легко</span>
+                            <span>Сложно</span>
+                        </div>
+                        <div class="pieces-info">
+                            <span class="pieces-count" id="piecesCount">12</span>
+                            <span class="pieces-label">частей</span>
+                            <span class="pieces-grid" id="piecesGrid">(4 × 3)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Размер бумаги</h3>
+                    <div class="paper-selector">
+                        <label class="paper-option">
+                            <input type="radio" name="paperSize" value="a4" checked>
+                            <div class="paper-card">
+                                <span class="paper-name">A4</span>
+                                <span class="paper-size">297×210 мм</span>
+                            </div>
+                        </label>
+                        <label class="paper-option">
+                            <input type="radio" name="paperSize" value="a3">
+                            <div class="paper-card">
+                                <span class="paper-name">A3</span>
+                                <span class="paper-size">420×297 мм</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Дополнительно</h3>
+                    <div class="control-row checkbox-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="keepAspectRatio" checked>
+                            <span class="checkbox-text">Сохранить пропорции изображения</span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <label for="margin">Отступы (мм):</label>
+                        <input type="number" id="margin" min="0" max="30" value="10" class="number-input">
+                    </div>
+                    <div class="control-row">
+                        <label for="lineWidth">Толщина линий:</label>
+                        <input type="number" id="lineWidth" min="0.5" max="3" step="0.1" value="0.5" class="number-input">
+                        <span class="unit">мм</span>
+                    </div>
+                </div>
+
+                <button id="generateBtn" class="btn-primary">
+                    <span class="btn-icon">&#9881;</span>
+                    Генерировать пазл
+                </button>
+            </div>
+
+            <!-- Right Panel - Preview -->
+            <div class="preview-panel">
+                <div class="preview-header">
+                    <h2>Предварительный просмотр</h2>
+                    <div class="preview-info" id="previewInfo"></div>
+                </div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-placeholder">
+                        <p>Загрузите изображение и нажмите "Генерировать пазл"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Panel -->
+        <div class="export-panel">
+            <h2>Экспорт</h2>
+            <div class="export-buttons">
+                <button id="exportPNG" class="btn-export btn-png" disabled>
+                    <span class="export-icon">&#128190;</span>
+                    <div class="export-text">
+                        <span class="export-title">PNG с изображением</span>
+                        <span class="export-desc">Для печати макета</span>
+                    </div>
+                </button>
+                <button id="exportSVG" class="btn-export btn-svg" disabled>
+                    <span class="export-icon">&#128196;</span>
+                    <div class="export-text">
+                        <span class="export-title">SVG (вектор)</span>
+                        <span class="export-desc">Для редактирования</span>
+                    </div>
+                </button>
+                <button id="exportDXF" class="btn-export btn-dxf" disabled>
+                    <span class="export-icon">&#9881;</span>
+                    <div class="export-text">
+                        <span class="export-title">DXF для ЧПУ</span>
+                        <span class="export-desc">RDWorks, LaserCut</span>
+                    </div>
+                </button>
+                <button id="exportCutLines" class="btn-export btn-cutlines" disabled>
+                    <span class="export-icon">&#9986;</span>
+                    <div class="export-text">
+                        <span class="export-title">PNG контуров</span>
+                        <span class="export-desc">Только линии резки</span>
+                    </div>
+                </button>
+            </div>
+            <div class="info-panel">
+                <p><strong>Инструкция по использованию:</strong></p>
+                <ul>
+                    <li><strong>PNG с изображением</strong> - распечатайте на бумаге и приклейте к фанере</li>
+                    <li><strong>SVG</strong> - редактируйте в Inkscape, CorelDRAW или Illustrator</li>
+                    <li><strong>DXF</strong> - загрузите в RDWorks или LaserCut для вырезания на ЧПУ</li>
+                    <li><strong>PNG контуров</strong> - только линии для резки без изображения</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>Puzzle Generator - Создавайте пазлы для печати и ЧПУ</p>
+        </footer>
+    </div>
+
+    <script>
+/**
+ * Puzzle Generator - Core puzzle piece generation algorithms
+ */
+class PuzzleGenerator {
+    constructor() {
+        this.currentPuzzle = null;
+        this.seed = Date.now();
+    }
+
+    random() {
+        this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
+        return (this.seed / 0x7fffffff);
+    }
+
+    resetSeed(seed = Date.now()) {
+        this.seed = seed;
+    }
+
+    generate(options) {
+        const { form, pieceType, cols, rows, width, height, margin, lineWidth = 1.5 } = options;
+        this.resetSeed();
+
+        let puzzleWidth = width;
+        let puzzleHeight = height;
+
+        if (form === 'square') {
+            const size = Math.min(width, height);
+            puzzleWidth = size;
+            puzzleHeight = size;
+        }
+
+        if (form === 'circular') {
+            return this.generateCircularPuzzle(cols, rows, puzzleWidth, puzzleHeight, margin, pieceType, lineWidth);
+        } else {
+            return this.generateRectangularPuzzle(cols, rows, puzzleWidth, puzzleHeight, margin, pieceType, lineWidth, form);
+        }
+    }
+
+    generateRectangularPuzzle(cols, rows, width, height, margin, pieceType, lineWidth, form) {
+        const pieces = [];
+        const innerWidth = width - 2 * margin;
+        const innerHeight = height - 2 * margin;
+        const pieceWidth = innerWidth / cols;
+        const pieceHeight = innerHeight / rows;
+        const tabSize = Math.min(pieceWidth, pieceHeight) * 0.20;
+
+        const horizontalTabs = this.generateTabMatrix(cols - 1, rows);
+        const verticalTabs = this.generateTabMatrix(cols, rows - 1);
+
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const x = margin + col * pieceWidth;
+                const y = margin + row * pieceHeight;
+
+                let piece;
+                if (pieceType === 'grid') {
+                    piece = this.createGridPiece({ x, y, width: pieceWidth, height: pieceHeight, row, col });
+                } else {
+                    piece = this.createClassicPiece({
+                        x, y, width: pieceWidth, height: pieceHeight, tabSize,
+                        topTab: row > 0 ? verticalTabs[row - 1][col] : 0,
+                        rightTab: col < cols - 1 ? horizontalTabs[row][col] : 0,
+                        bottomTab: row < rows - 1 ? -verticalTabs[row][col] : 0,
+                        leftTab: col > 0 ? -horizontalTabs[row][col - 1] : 0,
+                        row, col
+                    });
+                }
+                pieces.push(piece);
+            }
+        }
+
+        const borderPath = `M ${margin} ${margin} L ${width - margin} ${margin} L ${width - margin} ${height - margin} L ${margin} ${height - margin} Z`;
+
+        return { pieces, borderPath, width, height, cols, rows, form, pieceType, lineWidth, margin };
+    }
+
+    generateCircularPuzzle(segments, rings, width, height, margin, pieceType, lineWidth) {
+        const pieces = [];
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const maxRadius = Math.min(width, height) / 2 - margin;
+        const ringWidth = maxRadius / rings;
+
+        for (let ring = 0; ring < rings; ring++) {
+            const innerRadius = ring * ringWidth;
+            const outerRadius = (ring + 1) * ringWidth;
+
+            for (let segment = 0; segment < segments; segment++) {
+                const startAngle = (segment / segments) * Math.PI * 2 - Math.PI / 2;
+                const endAngle = ((segment + 1) / segments) * Math.PI * 2 - Math.PI / 2;
+
+                const piece = this.createCircularPiece({ centerX, centerY, innerRadius, outerRadius, startAngle, endAngle, ring, segment });
+                pieces.push(piece);
+            }
+        }
+
+        const borderPath = `M ${centerX + maxRadius} ${centerY} A ${maxRadius} ${maxRadius} 0 1 1 ${centerX - maxRadius} ${centerY} A ${maxRadius} ${maxRadius} 0 1 1 ${centerX + maxRadius} ${centerY} Z`;
+
+        return { pieces, borderPath, width, height, cols: segments, rows: rings, form: 'circular', pieceType, lineWidth, margin, centerX, centerY, radius: maxRadius };
+    }
+
+    createGridPiece(options) {
+        const { x, y, width, height, row, col } = options;
+        const path = `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
+        return { path, row, col, bounds: { x, y, width, height } };
+    }
+
+    createClassicPiece(options) {
+        const { x, y, width, height, tabSize, topTab, rightTab, bottomTab, leftTab, row, col } = options;
+        let path = `M ${x} ${y}`;
+        path += this.createJigsawEdge(x, y, x + width, y, tabSize, topTab, 'horizontal');
+        path += this.createJigsawEdge(x + width, y, x + width, y + height, tabSize, rightTab, 'vertical');
+        path += this.createJigsawEdge(x + width, y + height, x, y + height, tabSize, bottomTab, 'horizontal');
+        path += this.createJigsawEdge(x, y + height, x, y, tabSize, leftTab, 'vertical');
+        path += ' Z';
+        return { path, row, col, bounds: { x: x - tabSize, y: y - tabSize, width: width + 2 * tabSize, height: height + 2 * tabSize } };
+    }
+
+    createJigsawEdge(x1, y1, x2, y2, tabSize, tabDirection, orientation) {
+        if (tabDirection === 0) return ` L ${x2} ${y2}`;
+
+        const isHorizontal = orientation === 'horizontal';
+        const direction = isHorizontal ? (x2 > x1 ? 1 : -1) : (y2 > y1 ? 1 : -1);
+        const neckWidth = tabSize * 0.5;
+        const headRadius = tabSize * 0.65;
+        const neckLength = tabSize * 0.35;
+        const tabDepth = tabSize * tabDirection;
+
+        let path = '';
+
+        if (isHorizontal) {
+            const midX = (x1 + x2) / 2;
+            const y = y1;
+            const neckStartX = midX - (neckWidth / 2) * direction;
+            path += ` L ${neckStartX} ${y}`;
+            const neckEndY = y + neckLength * Math.sign(tabDepth);
+            path += ` L ${neckStartX} ${neckEndY}`;
+            const headCenterX = midX;
+            const headCenterY = y + tabDepth;
+            path += ` C ${neckStartX - headRadius * 0.3 * direction} ${neckEndY + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3},`;
+            path += ` ${headCenterX - headRadius * direction} ${headCenterY},`;
+            path += ` ${headCenterX} ${headCenterY + headRadius * Math.sign(tabDepth) * 0.15}`;
+            path += ` C ${headCenterX + headRadius * direction} ${headCenterY},`;
+            path += ` ${midX + (neckWidth / 2) * direction + headRadius * 0.3 * direction} ${neckEndY + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3},`;
+            path += ` ${midX + (neckWidth / 2) * direction} ${neckEndY}`;
+            path += ` L ${midX + (neckWidth / 2) * direction} ${y}`;
+            path += ` L ${x2} ${y2}`;
+        } else {
+            const midY = (y1 + y2) / 2;
+            const x = x1;
+            const neckStartY = midY - (neckWidth / 2) * direction;
+            path += ` L ${x} ${neckStartY}`;
+            const neckEndX = x + neckLength * Math.sign(tabDepth);
+            path += ` L ${neckEndX} ${neckStartY}`;
+            const headCenterX = x + tabDepth;
+            const headCenterY = midY;
+            path += ` C ${neckEndX + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3} ${neckStartY - headRadius * 0.3 * direction},`;
+            path += ` ${headCenterX} ${headCenterY - headRadius * direction},`;
+            path += ` ${headCenterX + headRadius * Math.sign(tabDepth) * 0.15} ${headCenterY}`;
+            path += ` C ${headCenterX} ${headCenterY + headRadius * direction},`;
+            path += ` ${neckEndX + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3} ${midY + (neckWidth / 2) * direction + headRadius * 0.3 * direction},`;
+            path += ` ${neckEndX} ${midY + (neckWidth / 2) * direction}`;
+            path += ` L ${x} ${midY + (neckWidth / 2) * direction}`;
+            path += ` L ${x2} ${y2}`;
+        }
+        return path;
+    }
+
+    createCircularPiece(options) {
+        const { centerX, centerY, innerRadius, outerRadius, startAngle, endAngle, ring, segment } = options;
+        const x1 = centerX + Math.cos(startAngle) * innerRadius;
+        const y1 = centerY + Math.sin(startAngle) * innerRadius;
+        const x2 = centerX + Math.cos(endAngle) * innerRadius;
+        const y2 = centerY + Math.sin(endAngle) * innerRadius;
+        const x3 = centerX + Math.cos(endAngle) * outerRadius;
+        const y3 = centerY + Math.sin(endAngle) * outerRadius;
+        const x4 = centerX + Math.cos(startAngle) * outerRadius;
+        const y4 = centerY + Math.sin(startAngle) * outerRadius;
+        const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+
+        let path;
+        if (innerRadius < 1) {
+            path = `M ${centerX} ${centerY} L ${x4} ${y4} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3} Z`;
+        } else {
+            path = `M ${x1} ${y1} A ${innerRadius} ${innerRadius} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${outerRadius} ${outerRadius} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+        }
+        return { path, ring, segment, bounds: { x: centerX - outerRadius, y: centerY - outerRadius, width: outerRadius * 2, height: outerRadius * 2 } };
+    }
+
+    generateTabMatrix(cols, rows) {
+        const matrix = [];
+        for (let row = 0; row < rows; row++) {
+            matrix[row] = [];
+            for (let col = 0; col < cols; col++) {
+                matrix[row][col] = this.random() > 0.5 ? 1 : -1;
+            }
+        }
+        return matrix;
+    }
+
+    static getPaperDimensions(paperSize, orientation, margin) {
+        const papers = { a4: { width: 210, height: 297 }, a3: { width: 297, height: 420 } };
+        let { width, height } = papers[paperSize] || papers.a4;
+        if (orientation === 'landscape') [width, height] = [height, width];
+        const mmToPixels = 3.7795275591;
+        return { width: width * mmToPixels, height: height * mmToPixels, widthMM: width, heightMM: height, margin: margin * mmToPixels, mmToPixels };
+    }
+
+    static getImageBasedDimensions(imageWidth, imageHeight, paperSize, margin) {
+        const papers = { a4: { maxWidth: 287, maxHeight: 200 }, a3: { maxWidth: 400, maxHeight: 277 } };
+        const paper = papers[paperSize] || papers.a4;
+        const mmToPixels = 3.7795275591;
+        const aspectRatio = imageWidth / imageHeight;
+        let width, height;
+        if (aspectRatio > paper.maxWidth / paper.maxHeight) {
+            width = paper.maxWidth;
+            height = width / aspectRatio;
+        } else {
+            height = paper.maxHeight;
+            width = height * aspectRatio;
+        }
+        return { width: width * mmToPixels, height: height * mmToPixels, widthMM: width, heightMM: height, margin: margin * mmToPixels, mmToPixels };
+    }
+
+    static getDifficultyGrid(level, aspectRatio = 1.5) {
+        const grids = [
+            { cols: 2, rows: 2 }, { cols: 3, rows: 2 }, { cols: 4, rows: 3 }, { cols: 5, rows: 4 }, { cols: 6, rows: 4 },
+            { cols: 7, rows: 5 }, { cols: 8, rows: 6 }, { cols: 10, rows: 7 }, { cols: 12, rows: 8 }, { cols: 15, rows: 10 }
+        ];
+        const grid = grids[Math.min(level - 1, grids.length - 1)] || grids[2];
+        if (aspectRatio > 1.3) return { cols: Math.max(grid.cols, grid.rows), rows: Math.min(grid.cols, grid.rows) };
+        else if (aspectRatio < 0.77) return { cols: Math.min(grid.cols, grid.rows), rows: Math.max(grid.cols, grid.rows) };
+        return grid;
+    }
+
+    static getCircularDifficultyGrid(level) {
+        const grids = [
+            { segments: 4, rings: 2 }, { segments: 6, rings: 2 }, { segments: 8, rings: 3 }, { segments: 10, rings: 3 }, { segments: 12, rings: 4 },
+            { segments: 14, rings: 4 }, { segments: 16, rings: 5 }, { segments: 18, rings: 5 }, { segments: 20, rings: 6 }, { segments: 24, rings: 6 }
+        ];
+        return grids[Math.min(level - 1, grids.length - 1)] || grids[2];
+    }
+}
+
+/**
+ * Export Utilities
+ */
+class ExportUtils {
+    static MM_TO_PIXELS = 3.7795275591;
+
+    static exportSVG(puzzleData, imageData = null, options = {}) {
+        const { width, height, pieces, borderPath, lineWidth = 1.5, form } = puzzleData;
+        const { includeImage = true, strokeColor = '#000000', strokeWidth = lineWidth } = options;
+
+        let svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
+        svg += '    <defs>\n';
+        if (borderPath) svg += `        <clipPath id="puzzleClip"><path d="${borderPath}"/></clipPath>\n`;
+        if (includeImage && imageData) svg += `        <pattern id="puzzleImage" x="0" y="0" width="1" height="1" patternContentUnits="objectBoundingBox"><image xlink:href="${imageData}" width="1" height="1" preserveAspectRatio="xMidYMid slice"/></pattern>\n`;
+        svg += '    </defs>\n';
+
+        if (includeImage && imageData) {
+            if (form === 'circular' && puzzleData.centerX) svg += `    <circle cx="${puzzleData.centerX}" cy="${puzzleData.centerY}" r="${puzzleData.radius}" fill="url(#puzzleImage)"/>\n`;
+            else if (borderPath) svg += `    <path d="${borderPath}" fill="url(#puzzleImage)"/>\n`;
+        }
+
+        svg += `    <g id="puzzle-cuts" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}">\n`;
+        pieces.forEach(piece => { svg += `        <path d="${piece.path}"/>\n`; });
+        if (borderPath) svg += `        <path d="${borderPath}" stroke-width="${strokeWidth * 1.5}"/>\n`;
+        svg += '    </g>\n</svg>';
+        return svg;
+    }
+
+    static async exportPNG(puzzleData, imageData = null, scale = 3) {
+        const svg = this.exportSVG(puzzleData, imageData, { includeImage: true });
+        return this.svgToPNG(svg, puzzleData.width, puzzleData.height, scale);
+    }
+
+    static async exportPNGCutLines(puzzleData, scale = 3) {
+        const { width, height, pieces, borderPath, lineWidth = 1.5 } = puzzleData;
+        let svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">\n    <rect width="${width}" height="${height}" fill="white"/>\n    <g fill="none" stroke="#000000" stroke-width="${lineWidth}">\n`;
+        pieces.forEach(piece => { svg += `        <path d="${piece.path}"/>\n`; });
+        if (borderPath) svg += `        <path d="${borderPath}" stroke-width="${lineWidth * 1.5}"/>\n`;
+        svg += '    </g>\n</svg>';
+        return this.svgToPNG(svg, width, height, scale);
+    }
+
+    static async svgToPNG(svgString, width, height, scale = 2) {
+        return new Promise((resolve, reject) => {
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob((blob) => { URL.revokeObjectURL(url); resolve(blob); }, 'image/png', 1.0);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load SVG')); };
+            img.src = url;
+        });
+    }
+
+    static exportDXF(puzzleData) {
+        const { width, height, pieces, borderPath } = puzzleData;
+        const widthMM = width / this.MM_TO_PIXELS;
+        const heightMM = height / this.MM_TO_PIXELS;
+
+        let dxf = '0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1015\n9\n$INSUNITS\n70\n4\n';
+        dxf += `9\n$EXTMIN\n10\n0.0\n20\n0.0\n30\n0.0\n9\n$EXTMAX\n10\n${widthMM.toFixed(4)}\n20\n${heightMM.toFixed(4)}\n30\n0.0\n0\nENDSEC\n`;
+        dxf += '0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n70\n1\n0\nLTYPE\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n0\nENDTAB\n';
+        dxf += '0\nTABLE\n2\nLAYER\n70\n2\n0\nLAYER\n2\nCUT\n70\n0\n62\n1\n6\nCONTINUOUS\n0\nLAYER\n2\nBORDER\n70\n0\n62\n5\n6\nCONTINUOUS\n0\nENDTAB\n0\nENDSEC\n';
+        dxf += '0\nSECTION\n2\nENTITIES\n';
+        pieces.forEach(piece => { dxf += this.pathToPolyline(piece.path, 'CUT', heightMM); });
+        if (borderPath) dxf += this.pathToPolyline(borderPath, 'BORDER', heightMM);
+        dxf += '0\nENDSEC\n0\nEOF\n';
+        return dxf;
+    }
+
+    static pathToPolyline(pathString, layer, heightMM) {
+        const points = this.getPathPoints(pathString);
+        if (points.length < 2) return '';
+        let dxf = `0\nLWPOLYLINE\n100\nAcDbEntity\n8\n${layer}\n100\nAcDbPolyline\n90\n${points.length}\n70\n1\n`;
+        points.forEach(point => {
+            const xMM = point.x / this.MM_TO_PIXELS;
+            const yMM = heightMM - (point.y / this.MM_TO_PIXELS);
+            dxf += `10\n${xMM.toFixed(4)}\n20\n${yMM.toFixed(4)}\n`;
+        });
+        return dxf;
+    }
+
+    static getPathPoints(pathString, resolution = 16) {
+        const points = [];
+        const commands = pathString.match(/[MLHVCSQTAZ][^MLHVCSQTAZ]*/gi) || [];
+        let currentX = 0, currentY = 0, startX = 0, startY = 0;
+
+        commands.forEach(cmd => {
+            const type = cmd[0].toUpperCase();
+            const values = cmd.slice(1).trim().split(/[\s,]+/).filter(v => v).map(parseFloat);
+
+            switch (type) {
+                case 'M': currentX = values[0]; currentY = values[1]; startX = currentX; startY = currentY; points.push({ x: currentX, y: currentY }); break;
+                case 'L': currentX = values[0]; currentY = values[1]; points.push({ x: currentX, y: currentY }); break;
+                case 'H': currentX = values[0]; points.push({ x: currentX, y: currentY }); break;
+                case 'V': currentY = values[0]; points.push({ x: currentX, y: currentY }); break;
+                case 'C':
+                    const cp1x = values[0], cp1y = values[1], cp2x = values[2], cp2y = values[3], endX = values[4], endY = values[5];
+                    for (let i = 1; i <= resolution; i++) {
+                        const t = i / resolution, t2 = t * t, t3 = t2 * t, mt = 1 - t, mt2 = mt * mt, mt3 = mt2 * mt;
+                        points.push({ x: mt3 * currentX + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * endX, y: mt3 * currentY + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * endY });
+                    }
+                    currentX = endX; currentY = endY; break;
+                case 'A':
+                    const rx = values[0], ry = values[1], ax = values[5], ay = values[6];
+                    points.push({ x: ax, y: ay }); currentX = ax; currentY = ay; break;
+                case 'Z':
+                    if (Math.abs(currentX - startX) > 0.01 || Math.abs(currentY - startY) > 0.01) points.push({ x: startX, y: startY });
+                    currentX = startX; currentY = startY; break;
+            }
+        });
+        return points;
+    }
+
+    static downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        this.downloadBlob(blob, filename);
+    }
+
+    static downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = filename;
+        document.body.appendChild(link); link.click();
+        document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
+
+    static createSVGPreview(puzzleData, imageData = null) {
+        const { width, height, pieces, borderPath, lineWidth = 1.5, form } = puzzleData;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+        if (imageData) {
+            const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            pattern.setAttribute('id', 'previewImage'); pattern.setAttribute('x', '0'); pattern.setAttribute('y', '0');
+            pattern.setAttribute('width', '1'); pattern.setAttribute('height', '1');
+            pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
+            const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageData);
+            image.setAttribute('width', '1'); image.setAttribute('height', '1');
+            image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            pattern.appendChild(image); defs.appendChild(pattern);
+        }
+        svg.appendChild(defs);
+
+        if (imageData) {
+            if (form === 'circular' && puzzleData.centerX) {
+                const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                bgCircle.setAttribute('cx', puzzleData.centerX); bgCircle.setAttribute('cy', puzzleData.centerY);
+                bgCircle.setAttribute('r', puzzleData.radius); bgCircle.setAttribute('fill', 'url(#previewImage)');
+                svg.appendChild(bgCircle);
+            } else if (borderPath) {
+                const bgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                bgPath.setAttribute('d', borderPath); bgPath.setAttribute('fill', 'url(#previewImage)');
+                svg.appendChild(bgPath);
+            }
+        } else if (borderPath) {
+            const bgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            bgPath.setAttribute('d', borderPath); bgPath.setAttribute('fill', '#f0f0f0');
+            svg.appendChild(bgPath);
+        }
+
+        const cutsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        cutsGroup.setAttribute('fill', 'none'); cutsGroup.setAttribute('stroke', '#333333');
+        cutsGroup.setAttribute('stroke-width', lineWidth.toString());
+        pieces.forEach(piece => {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', piece.path); cutsGroup.appendChild(path);
+        });
+        svg.appendChild(cutsGroup);
+
+        if (borderPath) {
+            const border = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            border.setAttribute('d', borderPath); border.setAttribute('fill', 'none');
+            border.setAttribute('stroke', '#000000'); border.setAttribute('stroke-width', (lineWidth * 2).toString());
+            svg.appendChild(border);
+        }
+        return svg;
+    }
+}
+
+/**
+ * Main Application
+ */
+class PuzzleApp {
+    constructor() {
+        this.generator = new PuzzleGenerator();
+        this.currentPuzzle = null;
+        this.imageData = null;
+        this.imageWidth = 0;
+        this.imageHeight = 0;
+        this.initializeElements();
+        this.attachEventListeners();
+        this.updateDifficultyDisplay();
+    }
+
+    initializeElements() {
+        this.elements = {
+            uploadArea: document.getElementById('uploadArea'),
+            imageUpload: document.getElementById('imageUpload'),
+            uploadPlaceholder: document.getElementById('uploadPlaceholder'),
+            imagePreview: document.getElementById('imagePreview'),
+            puzzleForm: document.querySelectorAll('input[name="puzzleForm"]'),
+            pieceType: document.querySelectorAll('input[name="pieceType"]'),
+            difficultySlider: document.getElementById('difficultySlider'),
+            piecesCount: document.getElementById('piecesCount'),
+            piecesGrid: document.getElementById('piecesGrid'),
+            paperSize: document.querySelectorAll('input[name="paperSize"]'),
+            keepAspectRatio: document.getElementById('keepAspectRatio'),
+            margin: document.getElementById('margin'),
+            lineWidth: document.getElementById('lineWidth'),
+            generateBtn: document.getElementById('generateBtn'),
+            previewContainer: document.getElementById('previewContainer'),
+            previewInfo: document.getElementById('previewInfo'),
+            exportPNG: document.getElementById('exportPNG'),
+            exportSVG: document.getElementById('exportSVG'),
+            exportDXF: document.getElementById('exportDXF'),
+            exportCutLines: document.getElementById('exportCutLines')
+        };
+    }
+
+    attachEventListeners() {
+        this.elements.uploadArea.addEventListener('click', () => this.elements.imageUpload.click());
+        this.elements.imageUpload.addEventListener('change', (e) => this.handleImageUpload(e));
+        this.elements.uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); this.elements.uploadArea.classList.add('dragover'); });
+        this.elements.uploadArea.addEventListener('dragleave', () => this.elements.uploadArea.classList.remove('dragover'));
+        this.elements.uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault(); this.elements.uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) this.loadImage(file);
+        });
+        this.elements.difficultySlider.addEventListener('input', () => this.updateDifficultyDisplay());
+        this.elements.puzzleForm.forEach(radio => radio.addEventListener('change', () => this.updateDifficultyDisplay()));
+        this.elements.generateBtn.addEventListener('click', () => this.generatePuzzle());
+        this.elements.exportPNG.addEventListener('click', () => this.exportPNG());
+        this.elements.exportSVG.addEventListener('click', () => this.exportSVG());
+        this.elements.exportDXF.addEventListener('click', () => this.exportDXF());
+        this.elements.exportCutLines.addEventListener('click', () => this.exportCutLines());
+    }
+
+    handleImageUpload(event) { const file = event.target.files[0]; if (file) this.loadImage(file); }
+
+    loadImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                this.imageData = e.target.result;
+                this.imageWidth = img.naturalWidth;
+                this.imageHeight = img.naturalHeight;
+                this.elements.imagePreview.src = this.imageData;
+                this.elements.imagePreview.style.display = 'block';
+                this.elements.uploadPlaceholder.style.display = 'none';
+                this.updateDifficultyDisplay();
+                this.showNotification(`Изображение загружено! ${this.imageWidth}×${this.imageHeight}px`);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    getSelectedValue(radioButtons) { for (const radio of radioButtons) if (radio.checked) return radio.value; return null; }
+
+    updateDifficultyDisplay() {
+        const level = parseInt(this.elements.difficultySlider.value);
+        const form = this.getSelectedValue(this.elements.puzzleForm);
+        let aspectRatio = 1.5;
+        if (this.imageWidth && this.imageHeight) aspectRatio = this.imageWidth / this.imageHeight;
+
+        let grid;
+        if (form === 'circular') {
+            grid = PuzzleGenerator.getCircularDifficultyGrid(level);
+            this.elements.piecesCount.textContent = grid.segments * grid.rings;
+            this.elements.piecesGrid.textContent = `(${grid.segments} × ${grid.rings})`;
+        } else {
+            grid = PuzzleGenerator.getDifficultyGrid(level, aspectRatio);
+            this.elements.piecesCount.textContent = grid.cols * grid.rows;
+            this.elements.piecesGrid.textContent = `(${grid.cols} × ${grid.rows})`;
+        }
+    }
+
+    generatePuzzle() {
+        const form = this.getSelectedValue(this.elements.puzzleForm);
+        const pieceType = this.getSelectedValue(this.elements.pieceType);
+        const paperSize = this.getSelectedValue(this.elements.paperSize);
+        const keepAspectRatio = this.elements.keepAspectRatio.checked;
+        const margin = parseFloat(this.elements.margin.value) || 10;
+        const lineWidth = parseFloat(this.elements.lineWidth.value) || 0.5;
+        const level = parseInt(this.elements.difficultySlider.value);
+
+        let aspectRatio = 1.5;
+        if (this.imageWidth && this.imageHeight) aspectRatio = this.imageWidth / this.imageHeight;
+
+        let dimensions;
+        if (keepAspectRatio && this.imageWidth && this.imageHeight) {
+            dimensions = PuzzleGenerator.getImageBasedDimensions(this.imageWidth, this.imageHeight, paperSize, margin);
+        } else {
+            dimensions = PuzzleGenerator.getPaperDimensions(paperSize, 'landscape', margin);
+        }
+
+        let cols, rows;
+        if (form === 'circular') {
+            const grid = PuzzleGenerator.getCircularDifficultyGrid(level);
+            cols = grid.segments; rows = grid.rings;
+        } else {
+            const grid = PuzzleGenerator.getDifficultyGrid(level, aspectRatio);
+            cols = grid.cols; rows = grid.rows;
+        }
+
+        try {
+            this.currentPuzzle = this.generator.generate({
+                form, pieceType, cols, rows,
+                width: dimensions.width, height: dimensions.height,
+                margin: dimensions.margin, lineWidth: lineWidth * dimensions.mmToPixels
+            });
+            this.renderPreview();
+            this.enableExportButtons();
+            this.showNotification(`Пазл создан! ${cols * rows} частей (${cols}×${rows})`);
+        } catch (error) {
+            this.showNotification('Ошибка: ' + error.message, 'error');
+        }
+    }
+
+    renderPreview() {
+        if (!this.currentPuzzle) return;
+        this.elements.previewContainer.innerHTML = '';
+        const svg = ExportUtils.createSVGPreview(this.currentPuzzle, this.imageData);
+        this.elements.previewContainer.appendChild(svg);
+
+        const { cols, rows, form, pieceType } = this.currentPuzzle;
+        const formNames = { rectangular: 'Прямоугольный', square: 'Квадратный', circular: 'Круговой' };
+        const typeNames = { classic: 'Классический', grid: 'Квадратики' };
+        this.elements.previewInfo.innerHTML = `<span>${formNames[form] || form}</span> | <span>${typeNames[pieceType] || pieceType}</span> | <span>${cols * rows} частей</span>`;
+    }
+
+    enableExportButtons() {
+        this.elements.exportPNG.disabled = false;
+        this.elements.exportSVG.disabled = false;
+        this.elements.exportDXF.disabled = false;
+        this.elements.exportCutLines.disabled = false;
+    }
+
+    getTimestamp() { return new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-'); }
+
+    async exportPNG() {
+        if (!this.currentPuzzle) return;
+        this.showNotification('Создание PNG...');
+        const blob = await ExportUtils.exportPNG(this.currentPuzzle, this.imageData, 3);
+        ExportUtils.downloadBlob(blob, `puzzle-${this.getTimestamp()}.png`);
+        this.showNotification('PNG скачан!');
+    }
+
+    async exportSVG() {
+        if (!this.currentPuzzle) return;
+        const svgContent = ExportUtils.exportSVG(this.currentPuzzle, this.imageData);
+        ExportUtils.downloadFile(svgContent, `puzzle-${this.getTimestamp()}.svg`, 'image/svg+xml');
+        this.showNotification('SVG скачан!');
+    }
+
+    exportDXF() {
+        if (!this.currentPuzzle) return;
+        const dxfContent = ExportUtils.exportDXF(this.currentPuzzle);
+        ExportUtils.downloadFile(dxfContent, `puzzle-${this.getTimestamp()}.dxf`, 'application/dxf');
+        this.showNotification('DXF скачан!');
+    }
+
+    async exportCutLines() {
+        if (!this.currentPuzzle) return;
+        this.showNotification('Создание PNG контуров...');
+        const blob = await ExportUtils.exportPNGCutLines(this.currentPuzzle, 3);
+        ExportUtils.downloadBlob(blob, `puzzle-cutlines-${this.getTimestamp()}.png`);
+        this.showNotification('PNG контуров скачан!');
+    }
+
+    showNotification(message, type = 'success') {
+        const existing = document.querySelector('.notification');
+        if (existing) existing.remove();
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        Object.assign(notification.style, {
+            position: 'fixed', top: '20px', right: '20px', padding: '15px 25px',
+            background: type === 'success' ? '#28a745' : '#dc3545', color: 'white',
+            borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', zIndex: '10000',
+            fontWeight: '600', maxWidth: '350px', animation: 'slideIn 0.3s ease-out'
+        });
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300);
+        }, 3000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => { window.puzzleApp = new PuzzleApp(); });
+    </script>
+</body>
+</html>
