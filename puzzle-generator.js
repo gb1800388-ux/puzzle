@@ -1,25 +1,20 @@
 /**
  * Puzzle Generator - Core puzzle piece generation algorithms
  * Supports: classic jigsaw with tabs, simple grid, rectangular/square/circular forms
+ * JigsawPlanet-style classic tabs
  */
 
 class PuzzleGenerator {
     constructor() {
         this.currentPuzzle = null;
-        this.seed = Date.now(); // For reproducible randomness
+        this.seed = Date.now();
     }
 
-    /**
-     * Seeded random number generator for consistent puzzles
-     */
     random() {
         this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
         return (this.seed / 0x7fffffff);
     }
 
-    /**
-     * Reset random seed
-     */
     resetSeed(seed = Date.now()) {
         this.seed = seed;
     }
@@ -68,7 +63,9 @@ class PuzzleGenerator {
         const innerHeight = height - 2 * margin;
         const pieceWidth = innerWidth / cols;
         const pieceHeight = innerHeight / rows;
-        const tabSize = Math.min(pieceWidth, pieceHeight) * 0.22;
+
+        // Tab size proportional to piece size (JigsawPlanet style)
+        const tabSize = Math.min(pieceWidth, pieceHeight) * 0.20;
 
         // Generate tab directions matrix
         const horizontalTabs = this.generateTabMatrix(cols - 1, rows);
@@ -132,13 +129,6 @@ class PuzzleGenerator {
         const maxRadius = Math.min(width, height) / 2 - margin;
         const ringWidth = maxRadius / rings;
 
-        // Tab size for classic pieces
-        const tabSize = ringWidth * 0.18;
-
-        // Generate tab directions
-        const radialTabs = this.generateTabMatrix(segments, rings - 1);
-        const ringTabs = this.generateTabMatrix(segments - 1, rings);
-
         for (let ring = 0; ring < rings; ring++) {
             const innerRadius = ring * ringWidth;
             const outerRadius = (ring + 1) * ringWidth;
@@ -147,26 +137,12 @@ class PuzzleGenerator {
                 const startAngle = (segment / segments) * Math.PI * 2 - Math.PI / 2;
                 const endAngle = ((segment + 1) / segments) * Math.PI * 2 - Math.PI / 2;
 
-                let piece;
-                if (pieceType === 'grid') {
-                    piece = this.createCircularGridPiece({
-                        centerX, centerY,
-                        innerRadius, outerRadius,
-                        startAngle, endAngle,
-                        ring, segment
-                    });
-                } else {
-                    piece = this.createCircularClassicPiece({
-                        centerX, centerY,
-                        innerRadius, outerRadius,
-                        startAngle, endAngle,
-                        tabSize,
-                        innerTab: ring > 0 ? radialTabs[segment][ring - 1] : 0,
-                        outerTab: ring < rings - 1 ? -radialTabs[segment][ring] : 0,
-                        ring, segment,
-                        totalSegments: segments
-                    });
-                }
+                const piece = this.createCircularPiece({
+                    centerX, centerY,
+                    innerRadius, outerRadius,
+                    startAngle, endAngle,
+                    ring, segment
+                });
 
                 pieces.push(piece);
             }
@@ -197,7 +173,6 @@ class PuzzleGenerator {
      */
     createGridPiece(options) {
         const { x, y, width, height, row, col } = options;
-
         const path = `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
 
         return {
@@ -209,7 +184,7 @@ class PuzzleGenerator {
     }
 
     /**
-     * Create classic jigsaw piece with tabs/blanks
+     * Create classic jigsaw piece with JigsawPlanet-style tabs
      */
     createClassicPiece(options) {
         const { x, y, width, height, tabSize, topTab, rightTab, bottomTab, leftTab, row, col } = options;
@@ -217,16 +192,16 @@ class PuzzleGenerator {
         let path = `M ${x} ${y}`;
 
         // Top edge
-        path += this.createEdgePath(x, y, x + width, y, tabSize, topTab, 'top');
+        path += this.createJigsawEdge(x, y, x + width, y, tabSize, topTab, 'horizontal');
 
         // Right edge
-        path += this.createEdgePath(x + width, y, x + width, y + height, tabSize, rightTab, 'right');
+        path += this.createJigsawEdge(x + width, y, x + width, y + height, tabSize, rightTab, 'vertical');
 
         // Bottom edge (reversed)
-        path += this.createEdgePath(x + width, y + height, x, y + height, tabSize, bottomTab, 'bottom');
+        path += this.createJigsawEdge(x + width, y + height, x, y + height, tabSize, bottomTab, 'horizontal');
 
         // Left edge (reversed)
-        path += this.createEdgePath(x, y + height, x, y, tabSize, leftTab, 'left');
+        path += this.createJigsawEdge(x, y + height, x, y, tabSize, leftTab, 'vertical');
 
         path += ' Z';
 
@@ -239,60 +214,90 @@ class PuzzleGenerator {
     }
 
     /**
-     * Create edge path with optional tab
+     * Create JigsawPlanet-style edge with rounded tab
+     * This creates the classic puzzle piece shape with a nice rounded knob
      */
-    createEdgePath(x1, y1, x2, y2, tabSize, tabDirection, edge) {
+    createJigsawEdge(x1, y1, x2, y2, tabSize, tabDirection, orientation) {
         if (tabDirection === 0) {
             return ` L ${x2} ${y2}`;
         }
 
-        const isHorizontal = edge === 'top' || edge === 'bottom';
-        const length = isHorizontal ? Math.abs(x2 - x1) : Math.abs(y2 - y1);
-        const tabWidth = tabSize * 0.8;
-        const neckWidth = tabSize * 0.4;
-        const tabDepth = tabSize * tabDirection;
+        const isHorizontal = orientation === 'horizontal';
+
+        // Calculate edge properties
+        const edgeLength = isHorizontal ? Math.abs(x2 - x1) : Math.abs(y2 - y1);
+        const direction = isHorizontal ? (x2 > x1 ? 1 : -1) : (y2 > y1 ? 1 : -1);
+
+        // Tab dimensions - JigsawPlanet style proportions
+        const neckWidth = tabSize * 0.5;      // Width of the neck
+        const headRadius = tabSize * 0.65;    // Radius of the round head
+        const neckLength = tabSize * 0.35;    // How far neck extends before head
+        const tabDepth = tabSize * tabDirection; // Positive = outward, negative = inward
 
         let path = '';
 
         if (isHorizontal) {
-            const dir = x2 > x1 ? 1 : -1;
             const midX = (x1 + x2) / 2;
             const y = y1;
 
-            // Start to neck start
-            path += ` L ${midX - (tabWidth + neckWidth) / 2 * dir} ${y}`;
+            // Start to neck
+            const neckStartX = midX - (neckWidth / 2) * direction;
+            path += ` L ${neckStartX} ${y}`;
 
-            // Neck curve in
-            path += ` C ${midX - tabWidth / 2 * dir} ${y + tabDepth * 0.2}, ${midX - tabWidth / 2 * dir} ${y + tabDepth * 0.5}, ${midX - tabWidth / 2 * dir} ${y + tabDepth * 0.5}`;
+            // Neck going out
+            const neckEndY = y + neckLength * Math.sign(tabDepth);
+            path += ` L ${neckStartX} ${neckEndY}`;
 
-            // Tab head (circular)
-            path += ` C ${midX - tabWidth * 0.7 * dir} ${y + tabDepth * 0.8}, ${midX - tabWidth * 0.5 * dir} ${y + tabDepth}, ${midX} ${y + tabDepth}`;
-            path += ` C ${midX + tabWidth * 0.5 * dir} ${y + tabDepth}, ${midX + tabWidth * 0.7 * dir} ${y + tabDepth * 0.8}, ${midX + tabWidth / 2 * dir} ${y + tabDepth * 0.5}`;
+            // Round head using arc
+            const headCenterX = midX;
+            const headCenterY = y + tabDepth;
 
-            // Neck curve out
-            path += ` C ${midX + tabWidth / 2 * dir} ${y + tabDepth * 0.2}, ${midX + (tabWidth + neckWidth) / 2 * dir} ${y}, ${midX + (tabWidth + neckWidth) / 2 * dir} ${y}`;
+            // Left side of head curve
+            path += ` C ${neckStartX - headRadius * 0.3 * direction} ${neckEndY + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3},`;
+            path += ` ${headCenterX - headRadius * direction} ${headCenterY},`;
+            path += ` ${headCenterX} ${headCenterY + headRadius * Math.sign(tabDepth) * 0.15}`;
 
-            // To end
+            // Right side of head curve
+            path += ` C ${headCenterX + headRadius * direction} ${headCenterY},`;
+            path += ` ${midX + (neckWidth / 2) * direction + headRadius * 0.3 * direction} ${neckEndY + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3},`;
+            path += ` ${midX + (neckWidth / 2) * direction} ${neckEndY}`;
+
+            // Neck coming back
+            path += ` L ${midX + (neckWidth / 2) * direction} ${y}`;
+
+            // To end point
             path += ` L ${x2} ${y2}`;
+
         } else {
-            const dir = y2 > y1 ? 1 : -1;
             const midY = (y1 + y2) / 2;
             const x = x1;
 
-            // Start to neck start
-            path += ` L ${x} ${midY - (tabWidth + neckWidth) / 2 * dir}`;
+            // Start to neck
+            const neckStartY = midY - (neckWidth / 2) * direction;
+            path += ` L ${x} ${neckStartY}`;
 
-            // Neck curve in
-            path += ` C ${x + tabDepth * 0.2} ${midY - tabWidth / 2 * dir}, ${x + tabDepth * 0.5} ${midY - tabWidth / 2 * dir}, ${x + tabDepth * 0.5} ${midY - tabWidth / 2 * dir}`;
+            // Neck going out
+            const neckEndX = x + neckLength * Math.sign(tabDepth);
+            path += ` L ${neckEndX} ${neckStartY}`;
 
-            // Tab head (circular)
-            path += ` C ${x + tabDepth * 0.8} ${midY - tabWidth * 0.7 * dir}, ${x + tabDepth} ${midY - tabWidth * 0.5 * dir}, ${x + tabDepth} ${midY}`;
-            path += ` C ${x + tabDepth} ${midY + tabWidth * 0.5 * dir}, ${x + tabDepth * 0.8} ${midY + tabWidth * 0.7 * dir}, ${x + tabDepth * 0.5} ${midY + tabWidth / 2 * dir}`;
+            // Round head using curves
+            const headCenterX = x + tabDepth;
+            const headCenterY = midY;
 
-            // Neck curve out
-            path += ` C ${x + tabDepth * 0.2} ${midY + tabWidth / 2 * dir}, ${x} ${midY + (tabWidth + neckWidth) / 2 * dir}, ${x} ${midY + (tabWidth + neckWidth) / 2 * dir}`;
+            // Top side of head curve
+            path += ` C ${neckEndX + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3} ${neckStartY - headRadius * 0.3 * direction},`;
+            path += ` ${headCenterX} ${headCenterY - headRadius * direction},`;
+            path += ` ${headCenterX + headRadius * Math.sign(tabDepth) * 0.15} ${headCenterY}`;
 
-            // To end
+            // Bottom side of head curve
+            path += ` C ${headCenterX} ${headCenterY + headRadius * direction},`;
+            path += ` ${neckEndX + (tabDepth - neckLength * Math.sign(tabDepth)) * 0.3} ${midY + (neckWidth / 2) * direction + headRadius * 0.3 * direction},`;
+            path += ` ${neckEndX} ${midY + (neckWidth / 2) * direction}`;
+
+            // Neck coming back
+            path += ` L ${x} ${midY + (neckWidth / 2) * direction}`;
+
+            // To end point
             path += ` L ${x2} ${y2}`;
         }
 
@@ -300,9 +305,9 @@ class PuzzleGenerator {
     }
 
     /**
-     * Create simple circular grid piece (arc segment)
+     * Create circular puzzle piece (arc segment)
      */
-    createCircularGridPiece(options) {
+    createCircularPiece(options) {
         const { centerX, centerY, innerRadius, outerRadius, startAngle, endAngle, ring, segment } = options;
 
         // Calculate corner points
@@ -318,77 +323,12 @@ class PuzzleGenerator {
         const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
 
         let path;
-        if (innerRadius === 0) {
+        if (innerRadius < 1) {
             // Center piece - pie slice
             path = `M ${centerX} ${centerY} L ${x4} ${y4} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3} Z`;
         } else {
             path = `M ${x1} ${y1} A ${innerRadius} ${innerRadius} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${outerRadius} ${outerRadius} 0 ${largeArc} 0 ${x4} ${y4} Z`;
         }
-
-        return {
-            path,
-            ring,
-            segment,
-            bounds: {
-                x: centerX - outerRadius,
-                y: centerY - outerRadius,
-                width: outerRadius * 2,
-                height: outerRadius * 2
-            }
-        };
-    }
-
-    /**
-     * Create circular classic piece with tabs on radial edges
-     */
-    createCircularClassicPiece(options) {
-        const {
-            centerX, centerY,
-            innerRadius, outerRadius,
-            startAngle, endAngle,
-            tabSize,
-            innerTab, outerTab,
-            ring, segment,
-            totalSegments
-        } = options;
-
-        // For simplicity, use grid pieces for circular classic (tabs on arcs are complex)
-        // We add tabs on the radial (straight) edges only
-
-        const x1 = centerX + Math.cos(startAngle) * innerRadius;
-        const y1 = centerY + Math.sin(startAngle) * innerRadius;
-        const x2 = centerX + Math.cos(endAngle) * innerRadius;
-        const y2 = centerY + Math.sin(endAngle) * innerRadius;
-        const x3 = centerX + Math.cos(endAngle) * outerRadius;
-        const y3 = centerY + Math.sin(endAngle) * outerRadius;
-        const x4 = centerX + Math.cos(startAngle) * outerRadius;
-        const y4 = centerY + Math.sin(startAngle) * outerRadius;
-
-        const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
-
-        let path;
-        if (innerRadius === 0) {
-            // Center piece
-            path = `M ${centerX} ${centerY}`;
-            // Start radial edge
-            path += ` L ${x4} ${y4}`;
-            // Outer arc
-            path += ` A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x3} ${y3}`;
-            // End radial edge back to center
-            path += ` L ${centerX} ${centerY}`;
-        } else {
-            path = `M ${x1} ${y1}`;
-            // Inner arc
-            path += ` A ${innerRadius} ${innerRadius} 0 ${largeArc} 1 ${x2} ${y2}`;
-            // End radial edge
-            path += ` L ${x3} ${y3}`;
-            // Outer arc (reverse direction)
-            path += ` A ${outerRadius} ${outerRadius} 0 ${largeArc} 0 ${x4} ${y4}`;
-            // Start radial edge back
-            path += ` L ${x1} ${y1}`;
-        }
-
-        path += ' Z';
 
         return {
             path,
@@ -446,6 +386,42 @@ class PuzzleGenerator {
     }
 
     /**
+     * Calculate dimensions based on image aspect ratio
+     */
+    static getImageBasedDimensions(imageWidth, imageHeight, paperSize, margin) {
+        const papers = {
+            a4: { maxWidth: 287, maxHeight: 200 }, // A4 landscape with margins
+            a3: { maxWidth: 400, maxHeight: 277 }  // A3 landscape with margins
+        };
+
+        const paper = papers[paperSize] || papers.a4;
+        const mmToPixels = 3.7795275591;
+
+        const aspectRatio = imageWidth / imageHeight;
+        let width, height;
+
+        // Fit image within paper bounds while maintaining aspect ratio
+        if (aspectRatio > paper.maxWidth / paper.maxHeight) {
+            // Image is wider - fit to width
+            width = paper.maxWidth;
+            height = width / aspectRatio;
+        } else {
+            // Image is taller - fit to height
+            height = paper.maxHeight;
+            width = height * aspectRatio;
+        }
+
+        return {
+            width: width * mmToPixels,
+            height: height * mmToPixels,
+            widthMM: width,
+            heightMM: height,
+            margin: margin * mmToPixels,
+            mmToPixels
+        };
+    }
+
+    /**
      * Calculate optimal grid based on difficulty level
      */
     static getDifficultyGrid(level, aspectRatio = 1.5) {
@@ -466,12 +442,12 @@ class PuzzleGenerator {
         const grid = grids[Math.min(level - 1, grids.length - 1)] || grids[2];
 
         // Adjust for aspect ratio
-        if (aspectRatio > 1.2) {
+        if (aspectRatio > 1.3) {
             // Landscape - more cols than rows
-            return { cols: grid.cols, rows: grid.rows };
-        } else if (aspectRatio < 0.8) {
+            return { cols: Math.max(grid.cols, grid.rows), rows: Math.min(grid.cols, grid.rows) };
+        } else if (aspectRatio < 0.77) {
             // Portrait - more rows than cols
-            return { cols: grid.rows, rows: grid.cols };
+            return { cols: Math.min(grid.cols, grid.rows), rows: Math.max(grid.cols, grid.rows) };
         }
 
         return grid;

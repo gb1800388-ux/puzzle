@@ -8,6 +8,8 @@ class PuzzleApp {
         this.currentPuzzle = null;
         this.currentImage = null;
         this.imageData = null;
+        this.imageWidth = 0;
+        this.imageHeight = 0;
 
         this.initializeElements();
         this.attachEventListeners();
@@ -29,6 +31,7 @@ class PuzzleApp {
             piecesCount: document.getElementById('piecesCount'),
             piecesGrid: document.getElementById('piecesGrid'),
             paperSize: document.querySelectorAll('input[name="paperSize"]'),
+            keepAspectRatio: document.getElementById('keepAspectRatio'),
             margin: document.getElementById('margin'),
             lineWidth: document.getElementById('lineWidth'),
             generateBtn: document.getElementById('generateBtn'),
@@ -109,13 +112,18 @@ class PuzzleApp {
             img.onload = () => {
                 this.currentImage = img;
                 this.imageData = e.target.result;
+                this.imageWidth = img.naturalWidth;
+                this.imageHeight = img.naturalHeight;
 
                 // Show preview
                 this.elements.imagePreview.src = this.imageData;
                 this.elements.imagePreview.style.display = 'block';
                 this.elements.uploadPlaceholder.style.display = 'none';
 
-                this.showNotification('Изображение загружено!');
+                // Update difficulty display with new aspect ratio
+                this.updateDifficultyDisplay();
+
+                this.showNotification(`Изображение загружено! ${this.imageWidth}×${this.imageHeight}px`);
             };
             img.onerror = () => {
                 this.showNotification('Ошибка загрузки изображения', 'error');
@@ -138,6 +146,12 @@ class PuzzleApp {
         const level = parseInt(this.elements.difficultySlider.value);
         const form = this.getSelectedValue(this.elements.puzzleForm);
 
+        // Calculate aspect ratio from image if available
+        let aspectRatio = 1.5; // Default landscape
+        if (this.imageWidth && this.imageHeight) {
+            aspectRatio = this.imageWidth / this.imageHeight;
+        }
+
         let grid;
         if (form === 'circular') {
             grid = PuzzleGenerator.getCircularDifficultyGrid(level);
@@ -145,7 +159,7 @@ class PuzzleApp {
             this.elements.piecesCount.textContent = pieces;
             this.elements.piecesGrid.textContent = `(${grid.segments} × ${grid.rings})`;
         } else {
-            grid = PuzzleGenerator.getDifficultyGrid(level);
+            grid = PuzzleGenerator.getDifficultyGrid(level, aspectRatio);
             const pieces = grid.cols * grid.rows;
             this.elements.piecesCount.textContent = pieces;
             this.elements.piecesGrid.textContent = `(${grid.cols} × ${grid.rows})`;
@@ -156,12 +170,31 @@ class PuzzleApp {
         const form = this.getSelectedValue(this.elements.puzzleForm);
         const pieceType = this.getSelectedValue(this.elements.pieceType);
         const paperSize = this.getSelectedValue(this.elements.paperSize);
+        const keepAspectRatio = this.elements.keepAspectRatio.checked;
         const margin = parseFloat(this.elements.margin.value) || 10;
         const lineWidth = parseFloat(this.elements.lineWidth.value) || 0.5;
         const level = parseInt(this.elements.difficultySlider.value);
 
-        // Get paper dimensions (landscape by default for horizontal photos)
-        const dimensions = PuzzleGenerator.getPaperDimensions(paperSize, 'landscape', margin);
+        // Calculate aspect ratio from image
+        let aspectRatio = 1.5;
+        if (this.imageWidth && this.imageHeight) {
+            aspectRatio = this.imageWidth / this.imageHeight;
+        }
+
+        // Get dimensions based on settings
+        let dimensions;
+        if (keepAspectRatio && this.imageWidth && this.imageHeight) {
+            // Use image aspect ratio
+            dimensions = PuzzleGenerator.getImageBasedDimensions(
+                this.imageWidth,
+                this.imageHeight,
+                paperSize,
+                margin
+            );
+        } else {
+            // Use standard paper size
+            dimensions = PuzzleGenerator.getPaperDimensions(paperSize, 'landscape', margin);
+        }
 
         // Get grid based on form and difficulty
         let cols, rows;
@@ -170,7 +203,7 @@ class PuzzleApp {
             cols = grid.segments;
             rows = grid.rings;
         } else {
-            const grid = PuzzleGenerator.getDifficultyGrid(level);
+            const grid = PuzzleGenerator.getDifficultyGrid(level, aspectRatio);
             cols = grid.cols;
             rows = grid.rows;
         }
