@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор Пазлов - Puzzle Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧩 Генератор Пазлов</h1>
+            <p>Создайте пазлы для печати и вырезания на ЧПУ</p>
+        </header>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <label for="imageUpload">📁 Загрузить изображение:</label>
+                <input type="file" id="imageUpload" accept="image/*">
+            </div>
+
+            <div class="control-group">
+                <label for="puzzleShape">🔷 Форма пазла:</label>
+                <select id="puzzleShape">
+                    <option value="rectangular">Прямоугольная</option>
+                    <option value="square">Квадратная</option>
+                    <option value="circular">Круговая</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="difficulty">⚙️ Сложность:</label>
+                <select id="difficulty">
+                    <option value="easy">Легко (6 частей)</option>
+                    <option value="medium">Средне (12 частей)</option>
+                    <option value="hard">Сложно (24 части)</option>
+                    <option value="expert">Эксперт (48 частей)</option>
+                    <option value="custom">Своё количество</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="customPiecesGroup" style="display: none;">
+                <label for="piecesX">Колонки:</label>
+                <input type="number" id="piecesX" min="2" max="20" value="4">
+                <label for="piecesY">Строки:</label>
+                <input type="number" id="piecesY" min="2" max="20" value="3">
+            </div>
+
+            <div class="control-group">
+                <label for="paperSize">📄 Размер бумаги:</label>
+                <select id="paperSize">
+                    <option value="a4">A4 (210×297 мм)</option>
+                    <option value="a3">A3 (297×420 мм)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="margin">🖼️ Отступы (мм):</label>
+                <input type="number" id="margin" min="0" max="50" value="10">
+            </div>
+
+            <button id="generateBtn" class="btn-primary">🎨 Генерировать пазл</button>
+        </div>
+
+        <div class="preview-panel">
+            <h2>Предварительный просмотр</h2>
+            <div id="previewCanvas"></div>
+        </div>
+
+        <div class="export-panel">
+            <h2>Экспорт</h2>
+            <div class="export-buttons">
+                <button id="exportSVG" class="btn-export" disabled>⬇️ Скачать SVG (вектор)</button>
+                <button id="exportPNG" class="btn-export" disabled>⬇️ Скачать PNG (печать)</button>
+                <button id="exportDXF" class="btn-export" disabled>⬇️ Скачать DXF (ЧПУ)</button>
+            </div>
+            <div class="info-panel">
+                <p>💡 <strong>Инструкция:</strong></p>
+                <ul>
+                    <li><strong>SVG</strong> - векторный формат для редактирования</li>
+                    <li><strong>PNG</strong> - для печати макета на бумаге</li>
+                    <li><strong>DXF</strong> - для вырезания на ЧПУ (RDWorks)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="puzzle-generator.js"></script>
+    <script src="export-utils.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
