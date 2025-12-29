@@ -14,20 +14,53 @@ class PuzzleGenerator {
         const { shape, cols, rows, width, height, margin } = options;
 
         switch (shape) {
-            case 'rectangular':
+            case 'classic':
+                return this.generateClassicPuzzle(cols, rows, width, height, margin);
             case 'square':
-                return this.generateRectangularPuzzle(cols, rows, width, height, margin);
-            case 'circular':
-                return this.generateCircularPuzzle(cols, rows, width, height, margin);
+                return this.generateSquarePuzzle(cols, rows, width, height, margin);
             default:
                 throw new Error('Unknown puzzle shape');
         }
     }
 
     /**
-     * Generate rectangular/square puzzle with classic jigsaw pieces
+     * Generate simple square pieces (no tabs/blanks)
      */
-    generateRectangularPuzzle(cols, rows, width, height, margin) {
+    generateSquarePuzzle(cols, rows, width, height, margin) {
+        const pieces = [];
+        const pieceWidth = (width - 2 * margin) / cols;
+        const pieceHeight = (height - 2 * margin) / rows;
+
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const x = margin + col * pieceWidth;
+                const y = margin + row * pieceHeight;
+
+                const path = `M ${x} ${y} L ${x + pieceWidth} ${y} L ${x + pieceWidth} ${y + pieceHeight} L ${x} ${y + pieceHeight} Z`;
+
+                pieces.push({
+                    path,
+                    row,
+                    col,
+                    bounds: { x, y, width: pieceWidth, height: pieceHeight }
+                });
+            }
+        }
+
+        return {
+            pieces,
+            width,
+            height,
+            cols,
+            rows,
+            type: 'square'
+        };
+    }
+
+    /**
+     * Generate classic jigsaw puzzle with tabs and blanks
+     */
+    generateClassicPuzzle(cols, rows, width, height, margin) {
         const pieces = [];
         const pieceWidth = (width - 2 * margin) / cols;
         const pieceHeight = (height - 2 * margin) / rows;
@@ -64,7 +97,7 @@ class PuzzleGenerator {
             height,
             cols,
             rows,
-            type: 'rectangular'
+            type: 'classic'
         };
     }
 
@@ -251,15 +284,22 @@ class PuzzleGenerator {
     }
 
     /**
-     * Calculate puzzle dimensions based on paper size
+     * Calculate puzzle dimensions based on paper size and orientation
      */
-    static getPaperDimensions(paperSize, margin) {
+    static getPaperDimensions(paperSize, margin, orientation = 'landscape') {
+        // Base dimensions in portrait orientation
         const dimensions = {
-            a4: { width: 210, height: 297 }, // mm
-            a3: { width: 297, height: 420 }  // mm
+            a4: { width: 210, height: 297 }, // mm (portrait)
+            a3: { width: 297, height: 420 }  // mm (portrait)
         };
 
-        const paper = dimensions[paperSize];
+        let paper = dimensions[paperSize];
+
+        // Swap dimensions for landscape orientation
+        if (orientation === 'landscape') {
+            paper = { width: paper.height, height: paper.width };
+        }
+
         const mmToPixels = 3.7795275591; // 96 DPI
 
         return {

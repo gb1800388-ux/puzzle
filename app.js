@@ -22,6 +22,7 @@ class PuzzleApp {
             piecesX: document.getElementById('piecesX'),
             piecesY: document.getElementById('piecesY'),
             paperSize: document.getElementById('paperSize'),
+            orientation: document.getElementById('orientation'),
             margin: document.getElementById('margin'),
             generateBtn: document.getElementById('generateBtn'),
             previewCanvas: document.getElementById('previewCanvas'),
@@ -84,10 +85,11 @@ class PuzzleApp {
         const shape = this.elements.puzzleShape.value;
         const difficulty = this.elements.difficulty.value;
         const paperSize = this.elements.paperSize.value;
+        const orientation = this.elements.orientation.value;
         const margin = parseFloat(this.elements.margin.value);
 
-        // Get dimensions
-        const dimensions = PuzzleGenerator.getPaperDimensions(paperSize, margin);
+        // Get dimensions with orientation
+        const dimensions = PuzzleGenerator.getPaperDimensions(paperSize, margin, orientation);
 
         // Get piece count
         let cols, rows;
@@ -98,14 +100,6 @@ class PuzzleApp {
             const settings = PuzzleGenerator.getDifficultySettings(difficulty);
             cols = settings.cols;
             rows = settings.rows;
-        }
-
-        // Adjust for circular puzzles
-        if (shape === 'circular') {
-            // For circular, cols = segments, rows = rings
-            if (difficulty !== 'custom') {
-                cols = cols * 2; // More segments for circular
-            }
         }
 
         // Generate puzzle
