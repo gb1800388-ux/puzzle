@@ -237,4 +237,9 @@ document.head.appendChild(style);
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.puzzleApp = new PuzzleApp();
+
+    // Generate initial demo puzzle
+    setTimeout(() => {
+        window.puzzleApp.generatePuzzle();
+    }, 100);
 });
