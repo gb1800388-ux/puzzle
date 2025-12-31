@@ -1149,7 +1149,7 @@ class PuzzleGenerator {
         return { path: d, center, ring: ringIndex, sector: sectorIndex };
     }
 
-    // Генерация дуги с плавным пазловым замком (следует кривизне)
+    // Генерация дуги с классическим пазловым замком (округлая головка)
     generateArcWithTab(cx, cy, radius, startAngle, endAngle, tabDir) {
         const arcLength = Math.abs(endAngle - startAngle) * radius;
 
@@ -1162,22 +1162,24 @@ class PuzzleGenerator {
         const midAngle = (startAngle + endAngle) / 2;
         const angleSpan = endAngle - startAngle;
 
-        // Параметры замка (в полярных координатах)
-        const tabHeight = Math.min(arcLength * 0.25, radius * 0.15) * tabDir;
-        const neckWidthAngle = angleSpan * 0.08;
-        const headWidthAngle = angleSpan * 0.15;
+        // Параметры замка
+        const tabHeight = Math.min(arcLength * 0.28, radius * 0.12);
+        const neckWidth = angleSpan * 0.06;  // Узкая шейка
+        const headRadius = tabHeight * 0.55; // Радиус круглой головки
 
-        // Функция для создания точки на дуге с модифицированным радиусом
+        // Функция для создания точки
         const polarPoint = (angle, r) => ({
             x: cx + Math.cos(angle) * r,
             y: cy + Math.sin(angle) * r
         });
 
-        // Плавная функция перехода (ease in-out)
-        const ease = (t) => t * t * (3 - 2 * t);
+        // Центр головки замка
+        const headCenterR = radius + tabDir * (tabHeight - headRadius * 0.3);
+        const headCenterX = cx + Math.cos(midAngle) * headCenterR;
+        const headCenterY = cy + Math.sin(midAngle) * headCenterR;
 
         // Первая часть дуги (до шейки)
-        const neckStartAngle = midAngle - neckWidthAngle;
+        const neckStartAngle = midAngle - neckWidth;
         const arcSteps = 8;
         for (let i = 0; i <= arcSteps; i++) {
             const t = i / arcSteps;
@@ -1185,65 +1187,46 @@ class PuzzleGenerator {
             points.push(polarPoint(angle, radius));
         }
 
-        // Левая сторона шейки (плавный переход вверх)
-        const headStartAngle = midAngle - headWidthAngle;
-        const neckSteps = 6;
+        // Точка начала шейки на дуге
+        const neckBaseLeft = polarPoint(neckStartAngle, radius);
+
+        // Левая сторона шейки (вверх к головке) - с изгибом внутрь
+        const neckSteps = 5;
         for (let i = 1; i <= neckSteps; i++) {
             const t = i / neckSteps;
-            const angle = neckStartAngle + (headStartAngle - neckStartAngle) * ease(t);
-            const r = radius + tabHeight * 0.65 * ease(t);
+            // Изгиб шейки внутрь (S-образная кривая)
+            const squeeze = Math.sin(t * Math.PI) * neckWidth * radius * 0.3;
+            const angle = neckStartAngle + squeeze / radius * tabDir;
+            const r = radius + tabDir * tabHeight * 0.45 * t;
             points.push(polarPoint(angle, r));
         }
 
-        // Левый изгиб головы (кривая Безье в полярных координатах)
-        const headPeakAngle = midAngle;
-        const curveSteps = 8;
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            // Плавный S-образный переход для угла
-            const angle = headStartAngle + (headPeakAngle - headStartAngle) * ease(t);
-            // Радиус плавно увеличивается до максимума
-            const heightFactor = 0.65 + 0.35 * Math.sin(t * Math.PI / 2);
-            const r = radius + tabHeight * heightFactor;
-            points.push(polarPoint(angle, r));
+        // Круглая головка (почти полный круг)
+        const headSteps = 16;
+        const headStartT = -0.4; // Начинаем немного ниже горизонтали
+        const headEndT = 1.4;    // Заканчиваем немного ниже горизонтали
+        for (let i = 0; i <= headSteps; i++) {
+            const t = headStartT + (headEndT - headStartT) * (i / headSteps);
+            const headAngle = midAngle + (tabDir > 0 ? -1 : 1) * Math.PI / 2 + t * Math.PI;
+            const px = headCenterX + Math.cos(headAngle) * headRadius;
+            const py = headCenterY + Math.sin(headAngle) * headRadius;
+            points.push({ x: px, y: py });
         }
 
-        // Верхняя часть головы (округлённая)
-        const headEndAngle = midAngle + headWidthAngle;
-        const topSteps = 10;
-        for (let i = 1; i <= topSteps; i++) {
-            const t = i / topSteps;
-            const angle = headPeakAngle + (headEndAngle - headPeakAngle) * t;
-            // Небольшая выпуклость на вершине
-            const bulge = Math.sin(t * Math.PI) * 0.08;
-            const r = radius + tabHeight * (1 + bulge);
-            points.push(polarPoint(angle, r));
-        }
-
-        // Правый изгиб головы
-        const neckEndAngle = midAngle + neckWidthAngle;
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            const angle = headEndAngle + (neckEndAngle - headEndAngle) * ease(t);
-            const heightFactor = 1 - 0.35 * Math.sin(t * Math.PI / 2);
-            const r = radius + tabHeight * heightFactor;
-            points.push(polarPoint(angle, r));
-        }
-
-        // Правая сторона шейки (плавный переход вниз)
+        // Правая сторона шейки (вниз от головки) - с изгибом внутрь
+        const neckEndAngle = midAngle + neckWidth;
         for (let i = 1; i <= neckSteps; i++) {
             const t = i / neckSteps;
-            const targetAngle = neckEndAngle + (endAngle - neckEndAngle) * 0.3 * t;
-            const angle = neckEndAngle + (targetAngle - neckEndAngle) * ease(t);
-            const r = radius + tabHeight * 0.65 * (1 - ease(t));
+            const squeeze = Math.sin((1 - t) * Math.PI) * neckWidth * radius * 0.3;
+            const angle = neckEndAngle - squeeze / radius * tabDir;
+            const r = radius + tabDir * tabHeight * 0.45 * (1 - t);
             points.push(polarPoint(angle, r));
         }
 
         // Последняя часть дуги (после шейки)
-        const arcEndStart = neckEndAngle + (endAngle - neckEndAngle) * 0.3;
         for (let i = 1; i <= arcSteps; i++) {
             const t = i / arcSteps;
-            const angle = arcEndStart + (endAngle - arcEndStart) * t;
+            const angle = neckEndAngle + (endAngle - neckEndAngle) * t;
             points.push(polarPoint(angle, radius));
         }
 
