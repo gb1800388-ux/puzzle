@@ -1138,9 +1138,8 @@ class PuzzleGenerator {
         return { path: d, center, ring: ringIndex, sector: sectorIndex };
     }
 
-    // Генерация дуги с замком в середине
+    // Генерация дуги с классическим пазловым замком в середине
     generateArcWithTab(cx, cy, radius, startAngle, endAngle, tabDir) {
-        const points = [];
         const midAngle = (startAngle + endAngle) / 2;
         const arcLength = Math.abs(endAngle - startAngle) * radius;
 
@@ -1149,46 +1148,98 @@ class PuzzleGenerator {
             return this.generateSimpleArc(cx, cy, radius, startAngle, endAngle);
         }
 
-        // Параметры замка
-        const tabHeight = Math.min(arcLength * 0.25, radius * 0.15);
-        const tabWidth = arcLength * 0.3; // Ширина замка в длине дуги
-        const tabWidthAngle = tabWidth / radius; // В радианах
+        const points = [];
 
-        const tabStartAngle = midAngle - tabWidthAngle / 2;
-        const tabEndAngle = midAngle + tabWidthAngle / 2;
+        // Параметры замка (классическая пазловая форма)
+        const tabHeight = Math.min(arcLength * 0.35, radius * 0.18);
+        const neckWidth = arcLength * 0.08;
+        const headWidth = arcLength * 0.15;
+        const neckWidthAngle = neckWidth / radius;
+        const headWidthAngle = headWidth / radius;
+
+        // Углы ключевых точек замка
+        const neckStartAngle = midAngle - neckWidthAngle;
+        const neckEndAngle = midAngle + neckWidthAngle;
+        const headStartAngle = midAngle - headWidthAngle;
+        const headEndAngle = midAngle + headWidthAngle;
 
         // Первая часть дуги (до замка)
-        const steps1 = 4;
+        const steps1 = 6;
         for (let i = 0; i <= steps1; i++) {
             const t = i / steps1;
-            const angle = startAngle + (tabStartAngle - startAngle) * t;
+            const angle = startAngle + (neckStartAngle - startAngle) * t;
             points.push({
                 x: cx + Math.cos(angle) * radius,
                 y: cy + Math.sin(angle) * radius
             });
         }
 
-        // Замок (кривая Безье для плавности)
-        const tabSteps = 12;
-        for (let i = 0; i <= tabSteps; i++) {
-            const t = i / tabSteps;
-            const angle = tabStartAngle + (tabEndAngle - tabStartAngle) * t;
-
-            // Форма замка: плавная кривая с выступом/впадиной
-            const tabShape = Math.sin(t * Math.PI); // 0 -> 1 -> 0
-            const tabR = radius + tabDir * tabHeight * tabShape;
-
+        // Левая сторона шейки (вверх к голове)
+        const neckSteps = 4;
+        for (let i = 1; i <= neckSteps; i++) {
+            const t = i / neckSteps;
+            const r = radius + tabDir * tabHeight * 0.6 * t;
+            const angle = neckStartAngle + (headStartAngle - neckStartAngle) * t * 0.3;
             points.push({
-                x: cx + Math.cos(angle) * tabR,
-                y: cy + Math.sin(angle) * tabR
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Левый изгиб головы
+        const headCurveSteps = 6;
+        for (let i = 1; i <= headCurveSteps; i++) {
+            const t = i / headCurveSteps;
+            const curveT = Math.sin(t * Math.PI / 2); // Плавный изгиб
+            const r = radius + tabDir * tabHeight * (0.6 + 0.4 * curveT);
+            const angle = headStartAngle * (1 - t * 0.5) + midAngle * t * 0.5;
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Верхняя часть головы (полукруг)
+        const topSteps = 8;
+        for (let i = 0; i <= topSteps; i++) {
+            const t = i / topSteps;
+            const angle = midAngle - headWidthAngle * 0.4 + headWidthAngle * 0.8 * t;
+            const bulge = Math.sin(t * Math.PI) * tabHeight * 0.15;
+            const r = radius + tabDir * (tabHeight + bulge);
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Правый изгиб головы
+        for (let i = 1; i <= headCurveSteps; i++) {
+            const t = i / headCurveSteps;
+            const curveT = Math.cos(t * Math.PI / 2);
+            const r = radius + tabDir * tabHeight * (0.6 + 0.4 * curveT);
+            const angle = midAngle * (1 - t * 0.5) + headEndAngle * t * 0.5;
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Правая сторона шейки (вниз от головы)
+        for (let i = 1; i <= neckSteps; i++) {
+            const t = i / neckSteps;
+            const r = radius + tabDir * tabHeight * 0.6 * (1 - t);
+            const angle = headEndAngle + (neckEndAngle - headEndAngle) * (0.7 + t * 0.3);
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
             });
         }
 
         // Вторая часть дуги (после замка)
-        const steps2 = 4;
+        const steps2 = 6;
         for (let i = 1; i <= steps2; i++) {
             const t = i / steps2;
-            const angle = tabEndAngle + (endAngle - tabEndAngle) * t;
+            const angle = neckEndAngle + (endAngle - neckEndAngle) * t;
             points.push({
                 x: cx + Math.cos(angle) * radius,
                 y: cy + Math.sin(angle) * radius
