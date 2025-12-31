@@ -1097,13 +1097,11 @@ class PuzzleGenerator {
         const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
 
         // Дуги с замками
-        // Направление замка определяется индексом кольца для согласованности между соседними деталями
-        // Внутренняя дуга: замок направлен внутрь (к центру) для чётных колец
-        const innerTabDir = (ringIndex % 2 === 0) ? -1 : 1;
-        // Внешняя дуга: замок направлен наружу для последнего кольца (нет замка), иначе противоположно внутренней
-        const outerTabDir = (ringIndex === numRings - 1) ? 0 : -innerTabDir;
+        // Внутренняя дуга: БЕЗ замков (замки приходят от внешней дуги предыдущего кольца/центра)
+        // Внешняя дуга: с замками наружу (кроме последнего кольца)
+        const outerTabDir = (ringIndex === numRings - 1) ? 0 : 1;
 
-        const innerArcPoints = this.generateArcWithTab(cx, cy, ring.innerRadius, angle1, angle2, innerTabDir);
+        const innerArcPoints = this.generateSimpleArc(cx, cy, ring.innerRadius, angle1, angle2);
         const outerArcPoints = this.generateArcWithTab(cx, cy, ring.outerRadius, angle1, angle2, outerTabDir);
 
         let d = '';
