@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Puzzle Generator - Fixed Version</title>
+<title>Puzzle Generator Pro - Advanced Circular</title>
 <style>
     :root {
         --primary: #2563eb;
@@ -49,7 +49,7 @@
 
     main {
         display: grid;
-        grid-template-columns: 320px 1fr;
+        grid-template-columns: 340px 1fr;
         height: 100%;
         overflow: hidden;
     }
@@ -61,15 +61,15 @@
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
     .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
-    .label { font-size: 0.8rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; }
-    
+    .label { font-size: 0.75rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.08em; }
+
     .upload-box {
         border: 2px dashed var(--border);
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 1.5rem;
         text-align: center;
         cursor: pointer;
@@ -80,44 +80,49 @@
     }
     .upload-box:hover { border-color: var(--primary); background: #eff6ff; }
     .upload-box input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .preview-img { max-width: 100%; max-height: 120px; display: none; margin: 0 auto; border-radius: 4px; box-shadow: var(--shadow); }
+    .preview-img { max-width: 100%; max-height: 140px; display: none; margin: 0 auto; border-radius: 6px; box-shadow: var(--shadow); }
 
-    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .card { position: relative; }
-    .card input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .card-content {
+    .puzzle-types { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .type-card { position: relative; }
+    .type-card input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .type-content {
         border: 2px solid var(--border);
-        border-radius: 8px;
-        padding: 0.6rem;
+        border-radius: 10px;
+        padding: 1rem 0.5rem;
         text-align: center;
-        font-size: 0.9rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: var(--text-sec);
         cursor: pointer;
         transition: 0.2s;
     }
-    .card input:checked + .card-content { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+    .type-content .icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+    .type-card input:checked + .type-content { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
 
-    input[type="range"] { width: 100%; accent-color: var(--primary); margin: 10px 0; }
+    input[type="range"] { width: 100%; accent-color: var(--primary); margin: 8px 0; }
     input[type="number"] {
         width: 100%;
-        padding: 0.5rem;
+        padding: 0.6rem;
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 8px;
+        font-size: 0.9rem;
     }
 
     .btn {
         background: var(--primary);
         color: white;
         border: none;
-        padding: 0.85rem;
-        border-radius: 8px;
+        padding: 0.9rem;
+        border-radius: 10px;
         font-weight: 600;
         cursor: pointer;
         display: flex; align-items: center; justify-content: center; gap: 8px;
         transition: 0.2s;
+        font-size: 0.95rem;
     }
-    .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-secondary { background: #64748b; }
+    .btn-secondary:hover { background: #475569; }
 
     .workspace {
         background: #e2e8f0;
@@ -127,35 +132,35 @@
         justify-content: center;
         overflow: auto;
         padding: 2rem;
-        background-image: 
-            linear-gradient(45deg, #cbd5e1 25%, transparent 25%), 
-            linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), 
-            linear-gradient(45deg, transparent 75%, #cbd5e1 75%), 
+        background-image:
+            linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+            linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
             linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
         background-size: 20px 20px;
         background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
     }
 
-    canvas { 
-        background: white; 
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+    canvas {
+        background: white;
+        box-shadow: 0 10px 40px -5px rgba(0,0,0,0.2);
         max-width: 100%;
         max-height: 100%;
     }
 
     .actions {
-        position: absolute; bottom: 2rem; right: 2rem;
+        position: absolute; bottom: 1.5rem; right: 1.5rem;
         background: var(--surface);
-        padding: 0.5rem;
-        border-radius: 12px;
+        padding: 0.6rem;
+        border-radius: 14px;
         display: flex; gap: 0.5rem;
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+        box-shadow: 0 10px 40px -5px rgba(0,0,0,0.2);
     }
 
     .icon-btn {
-        width: 48px; height: 48px;
+        width: 52px; height: 52px;
         border: 1px solid var(--border);
-        border-radius: 8px;
+        border-radius: 10px;
         background: var(--surface);
         cursor: pointer;
         display: flex; align-items: center; justify-content: center;
@@ -163,31 +168,48 @@
         transition: 0.2s;
         position: relative;
     }
-    .icon-btn:hover:not(:disabled) { color: var(--primary); border-color: var(--primary); background: #eff6ff; }
-    .icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    
+    .icon-btn:hover:not(:disabled) { color: var(--primary); border-color: var(--primary); background: #eff6ff; transform: scale(1.05); }
+    .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     .icon-btn::after {
         content: attr(data-tooltip);
-        position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
-        background: #1e293b; color: white; padding: 5px 10px;
-        border-radius: 4px; font-size: 0.75rem; white-space: nowrap;
+        position: absolute; bottom: 115%; left: 50%; transform: translateX(-50%);
+        background: #1e293b; color: white; padding: 6px 12px;
+        border-radius: 6px; font-size: 0.7rem; white-space: nowrap;
         opacity: 0; pointer-events: none; transition: 0.2s;
     }
     .icon-btn:hover::after { opacity: 1; }
 
     .toast {
-        position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
-        background: #1e293b; color: white; padding: 0.75rem 1.5rem;
-        border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        font-weight: 500; z-index: 100;
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-100px);
+        background: #1e293b; color: white; padding: 0.85rem 1.75rem;
+        border-radius: 50px; box-shadow: 0 10px 25px -3px rgba(0,0,0,0.2);
+        font-weight: 500; z-index: 100; font-size: 0.9rem;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    @media (max-width: 900px) {
+    .paper-selector { display: flex; gap: 8px; }
+    .paper-btn {
+        flex: 1;
+        padding: 10px;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        background: white;
+        cursor: pointer;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: 0.2s;
+    }
+    .paper-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+    .paper-btn span { display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+    .paper-btn.active span { color: var(--primary); }
+
+    @media (max-width: 1000px) {
         main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-        aside { max-height: 40vh; border-bottom: 1px solid var(--border); }
-        .actions { bottom: 1rem; right: 1rem; flex-wrap: wrap; width: calc(100% - 2rem); justify-content: center;}
+        aside { max-height: 35vh; border-bottom: 1px solid var(--border); padding: 1rem; }
+        .actions { bottom: 1rem; right: 1rem; flex-wrap: wrap; width: calc(100% - 2rem); justify-content: center; }
     }
 </style>
 </head>
@@ -195,23 +217,30 @@
 
 <header>
     <div class="brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 15.424a2.252 2.252 0 0 1-1.914-1.034l-1.864-2.968a2.252 2.252 0 0 0-1.914-1.034h-1.874a2.252 2.252 0 0 0-1.914 1.034l-1.864 2.968a2.252 2.252 0 0 1-1.914 1.034h-.005"/><path d="M12 3v3"/><path d="M3 12h3"/><path d="M12 21v-3"/><path d="M21 12h-3"/></svg>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19.439 15.424a2.252 2.252 0 0 1-1.914-1.034l-1.864-2.968a2.252 2.252 0 0 0-1.914-1.034h-1.874a2.252 2.252 0 0 0-1.914 1.034l-1.864 2.968a2.252 2.252 0 0 1-1.914 1.034h-.005"/>
+            <path d="M12 3v3"/><path d="M3 12h3"/><path d="M12 21v-3"/><path d="M21 12h-3"/>
+        </svg>
         Puzzle Generator Pro
     </div>
-    <div style="font-size: 0.85rem; color: var(--text-sec);">
-        Генерация паззлов для ЧПУ и печати
+    <div style="font-size: 0.8rem; color: var(--text-sec);">
+        Advanced Circular Puzzle
     </div>
 </header>
 
 <main>
     <aside>
         <div class="control-group">
-            <div class="label">1. Изображение</div>
+            <div class="label">1. Загрузить изображение</div>
             <div class="upload-box" id="dropZone">
                 <input type="file" id="fileInput" accept="image/*">
                 <div id="uploadPlaceholder">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <div style="margin-top:8px; font-size:0.9rem;">Нажмите или перетащите</div>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <div style="margin-top:10px; font-size:0.85rem; color:#64748b;">Нажмите или перетащите фото</div>
                 </div>
                 <img id="imagePreview" class="preview-img" alt="">
             </div>
@@ -219,51 +248,52 @@
 
         <div class="control-group">
             <div class="label">2. Формат бумаги</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div style="display:flex; align-items:center; gap:8px; padding:8px; border:2px solid var(--border); border-radius:8px;">
-                    <input type="radio" name="paper" value="a4" checked>
-                    <div>
-                        <div style="font-weight:700;">A4</div>
-                        <div style="font-size:0.75rem; color:#64748b;">297×210 мм</div>
-                    </div>
+            <div class="paper-selector">
+                <div class="paper-btn active" data-paper="a4">
+                    A4
+                    <span>297x210 мм</span>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px; padding:8px; border:2px solid var(--border); border-radius:8px;">
-                    <input type="radio" name="paper" value="a3">
-                    <div>
-                        <div style="font-weight:700;">A3</div>
-                        <div style="font-size:0.75rem; color:#64748b;">420×297 мм</div>
-                    </div>
+                <div class="paper-btn" data-paper="a3">
+                    A3
+                    <span>420x297 мм</span>
                 </div>
             </div>
         </div>
 
         <div class="control-group">
             <div class="label">3. Тип пазла</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div style="display:flex; align-items:center; gap:8px; padding:8px; border:2px solid var(--border); border-radius:8px; background:#eff6ff;">
-                    <input type="radio" name="type" value="classic" checked>
-                    <div>
-                        <div style="font-weight:700;">🧩 Классический</div>
-                        <div style="font-size:0.75rem; color:#64748b;">Как в jigsawplanet</div>
+            <div class="puzzle-types">
+                <div class="type-card">
+                    <input type="radio" name="puzzleType" value="classic" checked>
+                    <div class="type-content">
+                        <span class="icon">&#129513;</span>
+                        Классический
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px; padding:8px; border:2px solid var(--border); border-radius:8px;">
-                    <input type="radio" name="type" value="square">
-                    <div>
-                        <div style="font-weight:700;">⬜ Квадраты</div>
-                        <div style="font-size:0.75rem; color:#64748b;">Простые прямоугольники</div>
+                <div class="type-card">
+                    <input type="radio" name="puzzleType" value="square">
+                    <div class="type-content">
+                        <span class="icon">&#11036;</span>
+                        Квадраты
+                    </div>
+                </div>
+                <div class="type-card">
+                    <input type="radio" name="puzzleType" value="circular">
+                    <div class="type-content">
+                        <span class="icon">&#11093;</span>
+                        Круглый
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="control-group">
-            <div class="label">4. Сложность (Количество деталей)</div>
-            <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:0.8rem; color:#64748b; min-width:40px;">Легко</span>
+            <div class="label">4. Количество деталей</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.75rem; color:#64748b; min-width:38px;">Легко</span>
                 <input type="range" id="difficulty" min="1" max="10" value="5" style="flex:1;">
-                <span id="piecesCount" style="font-weight:700; color:var(--primary); min-width:60px;">~96 шт</span>
-                <span style="font-size:0.8rem; color:#64748b; min-width:40px;">Сложно</span>
+                <span id="piecesCount" style="font-weight:700; color:var(--primary); min-width:55px; font-size:0.9rem;">~70 шт</span>
+                <span style="font-size:0.75rem; color:#64748b; min-width:38px;">Сложно</span>
             </div>
         </div>
 
@@ -271,37 +301,42 @@
             <div class="label">5. Параметры реза</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                 <div>
-                    <label style="font-size:0.75rem; display:block; margin-bottom:4px;">Отступ от края (мм)</label>
+                    <label style="font-size:0.7rem; color:#64748b; display:block; margin-bottom:4px;">Отступ от края (мм)</label>
                     <input type="number" id="bleed" value="5" min="0" max="20">
                 </div>
                 <div>
-                    <label style="font-size:0.75rem; display:block; margin-bottom:4px;">Толщина линии реза</label>
-                    <input type="number" id="strokeWidth" value="1.5" step="0.5" min="0.1" max="5">
+                    <label style="font-size:0.7rem; color:#64748b; display:block; margin-bottom:4px;">Толщина линии (мм)</label>
+                    <input type="number" id="strokeWidth" value="0.5" step="0.1" min="0.1" max="3">
                 </div>
             </div>
         </div>
 
         <div class="control-group">
-            <div class="label">6. Дополнительно</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <label style="font-size:0.8rem;">
-                    <input type="checkbox" id="showBorders" checked>
+            <div class="label">6. Настройки</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <label style="font-size:0.85rem; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="showBorders" checked style="width:18px; height:18px;">
                     Показывать границы деталей
                 </label>
-                <label style="font-size:0.8rem;">
-                    <input type="checkbox" id="fitToPaper" checked>
-                    Автоматически подгонять под размер листа
+                <label style="font-size:0.85rem; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="numbered" style="width:18px; height:18px;">
+                    Нумеровать детали
                 </label>
             </div>
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:auto;">
             <button class="btn" id="btnGenerate">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
                 Сгенерировать
             </button>
-            <button class="btn" id="btnClear" style="background:#64748b; border:none;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <button class="btn btn-secondary" id="btnClear">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                </svg>
                 Очистить
             </button>
         </div>
@@ -314,19 +349,27 @@
 
 <div class="actions">
     <button class="icon-btn" id="btnPrint" disabled data-tooltip="PNG с изображением">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <path d="M6 14h12v8H6z"/>
+        </svg>
     </button>
-    <button class="icon-btn" id="btnCut" disabled data-tooltip="PNG только линии реза">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+    <button class="icon-btn" id="btnCut" disabled data-tooltip="PNG линии реза">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+        </svg>
     </button>
     <button class="icon-btn" id="btnSVG" disabled data-tooltip="Векторный SVG">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+        </svg>
     </button>
     <button class="icon-btn" id="btnDXF" disabled data-tooltip="DXF для ЧПУ">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
-    </button>
-    <button class="icon-btn" id="btnSave" disabled data-tooltip="Сохранить настройки">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15h6"/>
+        </svg>
     </button>
 </div>
 
@@ -334,86 +377,143 @@
 
 <script>
 /**
- * PRO PUZZLE GENERATOR - FIXED VERSION
- * - Исправлена геометрия замков (правильные кривые Безье)
- * - Уменьшен jitter для предотвращения пересечений
- * - Ровные линии между точками сетки
+ * PUZZLE GENERATOR PRO - ADVANCED CIRCULAR PUZZLE
+ *
+ * Как на изображении:
+ * - Разное количество секторов в каждом кольце (больше к краю)
+ * - Сдвиг секторов между кольцами (шахматный порядок)
+ * - Замки на всех внутренних рёбрах
  */
+
 const CONFIG = {
     DPI: 96,
-    MM_TO_PX: 96 / 25.4, 
+    MM_TO_PX: 96 / 25.4,
     PAPER: {
         a4: { w: 297, h: 210 },
         a3: { w: 420, h: 297 }
     },
-    DIFFICULTY_MAP: [4, 8, 12, 24, 48, 96, 150, 224, 320, 600],
-    // Улучшенные параметры для замков
-    TAB: {
-        neckW: 0.08,   // Уменьшена ширина шейки
-        headW: 0.12,   // Уменьшена ширина головки
-        tabH: 0.15     // Уменьшена высота замка
-    }
+    // Примерное количество деталей для каждого уровня сложности
+    PIECES_MAP: [20, 35, 50, 70, 100, 130, 170, 220, 280, 350]
 };
 
-class PuzzleApp {
+class SeededRandom {
+    constructor(seed = Date.now()) {
+        this.seed = seed;
+    }
+
+    next() {
+        this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
+        return this.seed / 0x7fffffff;
+    }
+
+    nextFloat(min, max) {
+        return min + this.next() * (max - min);
+    }
+}
+
+class PuzzleGenerator {
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d');
-        
+        this.rng = new SeededRandom();
+
         this.state = {
             image: null,
             paper: 'a4',
             type: 'classic',
             difficulty: 5,
             bleed: 5,
-            strokeWidth: 1.5,
+            strokeWidth: 0.5,
             showBorders: true,
-            fitToPaper: true
+            numbered: false
         };
 
-        this.pieces = []; 
-        this.imgBounds = { x:0, y:0, w:0, h:0 };
-        this.grid = { rows:0, cols:0 };
-        this.seed = Date.now();
+        this.pieces = [];
+        this.edges = { h: [], v: [] };
+        this.circularEdges = { radial: [], arc: [] };
+        this.imgBounds = { x: 0, y: 0, w: 0, h: 0 };
+        this.grid = { rows: 0, cols: 0 };
+        this.circleBounds = null;
+        this.ringConfig = [];
 
+        this.initCanvas();
         this.initListeners();
+    }
+
+    initCanvas() {
+        const paperSize = CONFIG.PAPER[this.state.paper];
+        const pxPerMm = CONFIG.MM_TO_PX;
+        this.canvas.width = paperSize.w * pxPerMm;
+        this.canvas.height = paperSize.h * pxPerMm;
+        this.renderPlaceholder();
     }
 
     initListeners() {
         const fileInput = document.getElementById('fileInput');
         fileInput.addEventListener('change', (e) => this.handleFile(e.target.files[0]));
-        
+
         const dz = document.getElementById('dropZone');
-        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.style.borderColor = 'var(--primary)'; });
-        dz.addEventListener('dragleave', (e) => { e.preventDefault(); dz.style.borderColor = ''; });
+        dz.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dz.style.borderColor = 'var(--primary)';
+            dz.style.background = '#eff6ff';
+        });
+        dz.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dz.style.borderColor = '';
+            dz.style.background = '';
+        });
         dz.addEventListener('drop', (e) => {
             e.preventDefault();
             dz.style.borderColor = '';
+            dz.style.background = '';
             if(e.dataTransfer.files[0]) this.handleFile(e.dataTransfer.files[0]);
         });
 
-        document.querySelectorAll('input[name="paper"]').forEach(el => 
-            el.addEventListener('change', (e) => { this.state.paper = e.target.value; this.update(); })
+        document.querySelectorAll('.paper-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.paper-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.state.paper = btn.dataset.paper;
+                if(this.state.image) this.generate();
+            });
+        });
+
+        document.querySelectorAll('input[name="puzzleType"]').forEach(el =>
+            el.addEventListener('change', (e) => {
+                this.state.type = e.target.value;
+                if(this.state.image) this.generate();
+            })
         );
-        document.querySelectorAll('input[name="type"]').forEach(el => 
-            el.addEventListener('change', (e) => { this.state.type = e.target.value; this.update(); })
-        );
+
         const diffSlider = document.getElementById('difficulty');
         diffSlider.addEventListener('input', (e) => {
             this.state.difficulty = parseInt(e.target.value);
-            document.getElementById('piecesCount').innerText = `~${CONFIG.DIFFICULTY_MAP[this.state.difficulty-1]} шт`;
+            document.getElementById('piecesCount').textContent = `~${CONFIG.PIECES_MAP[this.state.difficulty-1]} шт`;
         });
-        diffSlider.addEventListener('change', () => this.update());
+        diffSlider.addEventListener('change', () => {
+            if(this.state.image) this.generate();
+        });
+
         document.getElementById('bleed').addEventListener('change', (e) => {
             this.state.bleed = parseFloat(e.target.value);
-            this.update();
+            if(this.state.image) this.generate();
         });
         document.getElementById('strokeWidth').addEventListener('change', (e) => {
             this.state.strokeWidth = parseFloat(e.target.value);
             this.render();
         });
+        document.getElementById('showBorders').addEventListener('change', (e) => {
+            this.state.showBorders = e.target.checked;
+            this.render();
+        });
+        document.getElementById('numbered').addEventListener('change', (e) => {
+            this.state.numbered = e.target.checked;
+            this.render();
+        });
 
         document.getElementById('btnGenerate').addEventListener('click', () => this.generate());
+        document.getElementById('btnClear').addEventListener('click', () => this.clear());
         document.getElementById('btnPrint').addEventListener('click', () => this.downloadPNG('print'));
         document.getElementById('btnCut').addEventListener('click', () => this.downloadPNG('cut'));
         document.getElementById('btnSVG').addEventListener('click', () => this.downloadSVG());
@@ -421,7 +521,11 @@ class PuzzleApp {
     }
 
     handleFile(file) {
-        if(!file) return;
+        if(!file || !file.type.startsWith('image/')) {
+            this.showToast('Выберите изображение');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -430,257 +534,947 @@ class PuzzleApp {
                 document.getElementById('imagePreview').src = img.src;
                 document.getElementById('imagePreview').style.display = 'block';
                 document.getElementById('uploadPlaceholder').style.display = 'none';
-                this.showToast('Фото загружено');
-                this.generate();
+                this.showToast('Изображение загружено!');
+                setTimeout(() => this.generate(), 100);
             };
+            img.onerror = () => this.showToast('Ошибка загрузки');
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 
-    random() {
-        const x = Math.sin(this.seed++) * 10000;
-        return x - Math.floor(x);
-    }
-
-    update() {
-        if(this.state.image) this.generate();
+    clear() {
+        this.state.image = null;
+        this.pieces = [];
+        this.edges = { h: [], v: [] };
+        this.circularEdges = { radial: [], arc: [] };
+        this.circleBounds = null;
+        this.ringConfig = [];
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('imagePreview').src = '';
+        document.getElementById('uploadPlaceholder').style.display = 'block';
+        this.initCanvas();
+        document.querySelectorAll('.icon-btn').forEach(b => b.disabled = true);
+        this.showToast('Очищено');
     }
 
     generate() {
         if(!this.state.image) return;
-        this.seed = Date.now();
-        
+
+        this.rng = new SeededRandom(Date.now());
+
         const paperSize = CONFIG.PAPER[this.state.paper];
         const pxPerMm = CONFIG.MM_TO_PX;
         this.canvas.width = paperSize.w * pxPerMm;
         this.canvas.height = paperSize.h * pxPerMm;
 
-        const bleedPx = this.state.bleed * pxPerMm;
+        this.calculateImageBounds();
+
+        if (this.state.type === 'circular') {
+            this.generateCircularPuzzle();
+        } else {
+            this.generateRectangularPuzzle();
+        }
+
+        this.render();
+        document.querySelectorAll('.icon-btn').forEach(b => b.disabled = false);
+        this.showToast(`Сгенерировано ${this.pieces.length} деталей`);
+    }
+
+    calculateImageBounds() {
+        const bleedPx = this.state.bleed * CONFIG.MM_TO_PX;
         const availW = this.canvas.width - (bleedPx * 2);
         const availH = this.canvas.height - (bleedPx * 2);
         const imgAspect = this.state.image.width / this.state.image.height;
-        const areaAspect = availW / availH;
 
-        if (imgAspect > areaAspect) {
-            this.imgBounds.w = availW;
-            this.imgBounds.h = availW / imgAspect;
+        if (this.state.type === 'circular') {
+            const minDim = Math.min(availW, availH);
+            this.circleBounds = {
+                cx: this.canvas.width / 2,
+                cy: this.canvas.height / 2,
+                radius: minDim / 2 - 5
+            };
+            this.imgBounds.w = this.circleBounds.radius * 2;
+            this.imgBounds.h = this.circleBounds.radius * 2;
+            this.imgBounds.x = this.circleBounds.cx - this.circleBounds.radius;
+            this.imgBounds.y = this.circleBounds.cy - this.circleBounds.radius;
         } else {
-            this.imgBounds.h = availH;
-            this.imgBounds.w = availH * imgAspect;
+            this.circleBounds = null;
+            const areaAspect = availW / availH;
+            if (imgAspect > areaAspect) {
+                this.imgBounds.w = availW;
+                this.imgBounds.h = availW / imgAspect;
+            } else {
+                this.imgBounds.h = availH;
+                this.imgBounds.w = availH * imgAspect;
+            }
+            this.imgBounds.x = (this.canvas.width - this.imgBounds.w) / 2;
+            this.imgBounds.y = (this.canvas.height - this.imgBounds.h) / 2;
         }
-        this.imgBounds.x = (this.canvas.width - this.imgBounds.w) / 2;
-        this.imgBounds.y = (this.canvas.height - this.imgBounds.h) / 2;
-
-        this.calculateGrid();
-        this.createPaths();
-        this.render();
-        
-        document.querySelectorAll('.icon-btn').forEach(b => b.disabled = false);
     }
 
-    calculateGrid() {
-        const target = CONFIG.DIFFICULTY_MAP[this.state.difficulty - 1];
-        const aspect = this.imgBounds.w / this.imgBounds.h;
-        let rows = Math.round(Math.sqrt(target / aspect));
-        let cols = Math.round(target / rows);
-        if (rows < 2) rows = 2;
-        if (cols < 2) cols = 2;
-        this.grid = { rows, cols };
-    }
+    // ==================== CIRCULAR PUZZLE ====================
 
-    createPaths() {
+    generateCircularPuzzle() {
+        const targetPieces = CONFIG.PIECES_MAP[this.state.difficulty - 1];
+        const { cx, cy, radius } = this.circleBounds;
+
+        // Определяем количество колец и секторов
+        let numRings = Math.max(3, Math.min(8, Math.round(Math.sqrt(targetPieces / 8))));
+
+        // Определяем количество секторов в каждом кольце
+        this.ringConfig = [];
+        let totalPieces = 1;
+
+        // Базовое количество секторов для первого кольца
+        let baseSectors = Math.max(6, Math.round(targetPieces / numRings / 2));
+
+        for (let r = 0; r < numRings; r++) {
+            let sectors;
+            if (r === 0) {
+                sectors = Math.max(6, Math.round(baseSectors * 0.6));
+            } else {
+                const prevSectors = this.ringConfig[r - 1].sectors;
+                const growthFactor = 1 + (0.2 + this.rng.nextFloat(0, 0.2));
+                sectors = Math.round(prevSectors * growthFactor);
+            }
+            sectors = Math.min(sectors, 30);
+            this.ringConfig.push({ sectors });
+            totalPieces += sectors;
+        }
+
+        // Радиус центральной детали - такой чтобы площадь была ~равна деталям первого кольца
+        const firstRingSectors = this.ringConfig[0].sectors;
+        // Площадь центральной детали = π * centerR²
+        // Площадь одной детали первого кольца ≈ π * (outerR² - centerR²) / sectors
+        // Для равенства: centerR² ≈ (outerR² - centerR²) / sectors
+        // centerR² * (sectors + 1) = outerR²
+        // centerR = outerR / sqrt(sectors + 1)
+        // Если первое кольцо занимает ~20% радиуса, outerR1 ≈ 0.25 * radius
+        const firstRingOuterRadius = radius * 0.28;
+        this.centerRadius = firstRingOuterRadius / Math.sqrt(firstRingSectors + 1);
+        this.centerRadius = Math.max(this.centerRadius, radius * 0.08);
+        this.centerRadius = Math.min(this.centerRadius, radius * 0.18);
+
+        // Теперь рассчитываем радиусы колец
+        for (let r = 0; r < numRings; r++) {
+            const innerR = (r === 0) ? this.centerRadius : this.ringConfig[r - 1].outerRadius;
+            const outerR = this.centerRadius + ((r + 1) / numRings) * (radius - this.centerRadius);
+
+            // Сдвиг для шахматного порядка
+            const offset = (r % 2 === 1) ? (Math.PI / this.ringConfig[r].sectors) : 0;
+
+            this.ringConfig[r].offset = offset;
+            this.ringConfig[r].innerRadius = innerR;
+            this.ringConfig[r].outerRadius = outerR;
+        }
+
+        // Генерируем радиальные рёбра для каждого кольца (с замками)
+        this.circularEdges = { radial: [] };
+
+        for (let r = 0; r < numRings; r++) {
+            const ring = this.ringConfig[r];
+            this.circularEdges.radial[r] = [];
+
+            for (let s = 0; s < ring.sectors; s++) {
+                const angle = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+
+                const innerPt = {
+                    x: cx + Math.cos(angle) * ring.innerRadius,
+                    y: cy + Math.sin(angle) * ring.innerRadius
+                };
+                const outerPt = {
+                    x: cx + Math.cos(angle) * ring.outerRadius,
+                    y: cy + Math.sin(angle) * ring.outerRadius
+                };
+
+                const tab = this.generateTabParams();
+
+                this.circularEdges.radial[r][s] = {
+                    points: this.generateEdgePoints(innerPt, outerPt, tab),
+                    innerPt,
+                    outerPt
+                };
+            }
+        }
+
+        // Создаём детали
         this.pieces = [];
-        const { rows, cols } = this.grid;
-        const { x, y, w, h } = this.imgBounds;
-        const pW = w / cols;
-        const pH = h / rows;
 
-        // Создаём сетку точек с минимальным дрожанием
-        const mesh = [];
-        for (let r = 0; r <= rows; r++) {
-            const rowPoints = [];
-            for (let c = 0; c <= cols; c++) {
-                let px = x + c * pW;
-                let py = y + r * pH;
+        // Центральная деталь
+        const centerPiece = this.buildCenterPiece();
+        this.pieces.push(centerPiece);
 
-                // Минимальный jitter (0.08) только для внутренних точек
-                if (r > 0 && r < rows && c > 0 && c < cols) {
-                    const jitterX = (this.random() - 0.5) * (pW * 0.08); 
-                    const jitterY = (this.random() - 0.5) * (pH * 0.08);
-                    px += jitterX;
-                    py += jitterY;
-                }
-                rowPoints.push({ x: px, y: py });
-            }
-            mesh.push(rowPoints);
-        }
-
-        // Генерация направлений замков
-        const hTabs = Array(rows).fill(0).map(() => Array(cols).fill(0));
-        const vTabs = Array(rows).fill(0).map(() => Array(cols).fill(0));
-
-        if (this.state.type === 'classic') {
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    if (r < rows - 1) hTabs[r][c] = this.random() > 0.5 ? 1 : -1;
-                    if (c < cols - 1) vTabs[r][c] = this.random() > 0.5 ? 1 : -1;
-                }
-            }
-        }
-
-        // Сборка путей для каждого кусочка
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const p1 = mesh[r][c];
-                const p2 = mesh[r][c+1];
-                const p3 = mesh[r+1][c+1];
-                const p4 = mesh[r+1][c];
-
-                const top = (r === 0) ? 0 : -hTabs[r-1][c];
-                const right = (c === cols-1) ? 0 : vTabs[r][c];
-                const bottom = (r === rows-1) ? 0 : hTabs[r][c];
-                const left = (c === 0) ? 0 : -vTabs[r][c-1];
-
-                const path = this.buildPiecePath(p1, p2, p3, p4, top, right, bottom, left);
-                this.pieces.push(path);
+        // Все кольца
+        for (let r = 0; r < numRings; r++) {
+            const ring = this.ringConfig[r];
+            for (let s = 0; s < ring.sectors; s++) {
+                const piece = this.buildCircularPiece(r, s, numRings);
+                this.pieces.push(piece);
             }
         }
     }
 
-    buildPiecePath(p1, p2, p3, p4, top, right, bottom, left) {
-        let d = `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
-        d += this.getEdge(p1.x, p1.y, p2.x, p2.y, top);
-        d += this.getEdge(p2.x, p2.y, p3.x, p3.y, right);
-        d += this.getEdge(p3.x, p3.y, p4.x, p4.y, bottom);
-        d += this.getEdge(p4.x, p4.y, p1.x, p1.y, left);
+    // Генерация границы между кольцами (полный круг с замками)
+    generateRingBoundary(ringIndex) {
+        const { cx, cy, radius } = this.circleBounds;
+        const boundaryRadius = (ringIndex === 0) ? this.centerRadius : this.ringConfig[ringIndex - 1].outerRadius;
+        const numRings = this.ringConfig.length;
+        const isOuterBoundary = (ringIndex === numRings);
+
+        // Определяем количество замков на этой границе
+        // Используем количество секторов большего кольца
+        let numTabs;
+        if (ringIndex === 0) {
+            numTabs = this.ringConfig[0].sectors;
+        } else if (ringIndex >= numRings) {
+            numTabs = 0;
+        } else {
+            numTabs = Math.max(this.ringConfig[ringIndex - 1].sectors, this.ringConfig[ringIndex].sectors);
+        }
+
+        // Создаём массив точек для полной окружности с замками
+        const boundaryPoints = [];
+        const angleStep = (Math.PI * 2) / Math.max(numTabs, 12);
+
+        for (let i = 0; i < numTabs; i++) {
+            const angle1 = i * angleStep - Math.PI / 2;
+            const angle2 = (i + 1) * angleStep - Math.PI / 2;
+
+            const tab = isOuterBoundary ? null : this.generateTabParams();
+            const arcPoints = this.generateArcPoints(cx, cy, boundaryRadius, angle1, angle2, tab);
+
+            boundaryPoints.push({
+                angle1,
+                angle2,
+                points: arcPoints,
+                tab
+            });
+        }
+
+        return {
+            radius: boundaryRadius,
+            segments: boundaryPoints
+        };
+    }
+
+    // Получить точки границы для заданного диапазона углов
+    getBoundaryPoints(boundaryIndex, startAngle, endAngle) {
+        const boundary = this.ringBoundaries[boundaryIndex];
+        if (!boundary) return null;
+
+        const { cx, cy } = this.circleBounds;
+        const result = [];
+
+        // Нормализуем углы
+        while (startAngle < -Math.PI) startAngle += Math.PI * 2;
+        while (startAngle > Math.PI) startAngle -= Math.PI * 2;
+        while (endAngle < startAngle) endAngle += Math.PI * 2;
+
+        // Собираем точки из сегментов, попадающих в диапазон
+        for (const segment of boundary.segments) {
+            let segStart = segment.angle1;
+            let segEnd = segment.angle2;
+
+            // Нормализуем
+            while (segStart < -Math.PI) segStart += Math.PI * 2;
+            while (segStart > Math.PI) segStart -= Math.PI * 2;
+            while (segEnd < segStart) segEnd += Math.PI * 2;
+
+            // Проверяем пересечение
+            if (segEnd >= startAngle && segStart <= endAngle) {
+                for (const pt of segment.points) {
+                    result.push({ ...pt });
+                }
+            }
+        }
+
+        // Если не нашли подходящих сегментов, генерируем простую дугу
+        if (result.length === 0) {
+            const steps = 8;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const angle = startAngle + (endAngle - startAngle) * t;
+                result.push({
+                    x: cx + Math.cos(angle) * boundary.radius,
+                    y: cy + Math.sin(angle) * boundary.radius
+                });
+            }
+        }
+
+        return result;
+    }
+
+    // Построение центральной детали - простой круг
+    buildCenterPiece() {
+        const { cx, cy } = this.circleBounds;
+        const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+
+        // Генерируем окружность как набор точек
+        const points = [];
+        const steps = 36;
+        for (let i = 0; i <= steps; i++) {
+            const angle = (i / steps) * Math.PI * 2 - Math.PI / 2;
+            points.push({
+                x: cx + Math.cos(angle) * this.centerRadius,
+                y: cy + Math.sin(angle) * this.centerRadius
+            });
+        }
+
+        let d = `M ${fmt(points[0])}`;
+        for (let i = 1; i < points.length; i++) {
+            d += ` L ${fmt(points[i])}`;
+        }
         d += ' Z';
-        return d;
+
+        return {
+            path: d,
+            center: { x: cx, y: cy },
+            isCenter: true
+        };
     }
 
-    // ИСПРАВЛЕННЫЙ генератор замков с правильными кривыми Безье
-    getEdge(x1, y1, x2, y2, type) {
-        // Прямая линия для границ или квадратного типа
-        if (type === 0 || this.state.type === 'square') {
-            return ` L ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    generateTabParams() {
+        if (this.state.type === 'square') return null;
+        return {
+            dir: this.rng.next() > 0.5 ? 1 : -1,
+            neckWidth: this.rng.nextFloat(0.08, 0.12),
+            headWidth: this.rng.nextFloat(0.14, 0.20),
+            height: this.rng.nextFloat(0.18, 0.25)
+        };
+    }
+
+    generateEdgePoints(p1, p2, tab) {
+        if (!tab) {
+            return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
         }
 
-        const dx = x2 - x1;
-        const dy = y2 - y1;
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
         const len = Math.sqrt(dx * dx + dy * dy);
-        
-        // Защита от слишком коротких рёбер
-        if (len < 10) {
-            return ` L ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+
+        if (len < 15) {
+            return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
         }
 
-        // Единичные векторы
+        return this.generateTabPoints(p1, p2, tab);
+    }
+
+    generateArcPoints(cx, cy, radius, angle1, angle2, tab) {
+        // Создаём точки вдоль дуги
+        const steps = 12;
+        const arcPoints = [];
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = angle1 + (angle2 - angle1) * t;
+            arcPoints.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+
+        if (!tab) {
+            return arcPoints;
+        }
+
+        // Вставляем замок в середину дуги
+        const midIndex = Math.floor(steps / 2);
+        const p1 = arcPoints[midIndex - 1];
+        const p2 = arcPoints[midIndex + 1];
+
+        // Генерируем замок между p1 и p2
+        const tabPoints = this.generateTabPointsForArc(cx, cy, radius, angle1, angle2, tab);
+
+        // Заменяем среднюю часть дуги на замок
+        const result = [];
+        for (let i = 0; i < midIndex - 1; i++) {
+            result.push(arcPoints[i]);
+        }
+        result.push(...tabPoints);
+        for (let i = midIndex + 2; i <= steps; i++) {
+            result.push(arcPoints[i]);
+        }
+
+        return result;
+    }
+
+    generateTabPointsForArc(cx, cy, radius, angle1, angle2, tab) {
+        // Генерируем замок на дуге
+        const midAngle = (angle1 + angle2) / 2;
+        const arcLen = Math.abs(angle2 - angle1) * radius;
+
+        // Точка в центре замка
+        const midPt = {
+            x: cx + Math.cos(midAngle) * radius,
+            y: cy + Math.sin(midAngle) * radius
+        };
+
+        // Направление наружу (перпендикуляр к дуге)
+        const outX = Math.cos(midAngle);
+        const outY = Math.sin(midAngle);
+
+        // Направление вдоль дуги
+        const tangentX = -Math.sin(midAngle);
+        const tangentY = Math.cos(midAngle);
+
+        const dir = tab.dir;
+        const tabHeight = arcLen * tab.height;
+        const neckW = arcLen * tab.neckWidth;
+        const headW = arcLen * tab.headWidth;
+
+        const points = [];
+        const steps = 8;
+
+        // Точки начала замка
+        const startAngle = midAngle - (neckW / radius);
+        const endAngle = midAngle + (neckW / radius);
+
+        // Левая часть до замка
+        points.push({
+            x: cx + Math.cos(startAngle) * radius,
+            y: cy + Math.sin(startAngle) * radius
+        });
+
+        // Левая сторона шейки
+        const neckStartPt = {
+            x: cx + Math.cos(startAngle) * radius,
+            y: cy + Math.sin(startAngle) * radius
+        };
+
+        // Верх замка (смещён наружу или внутрь)
+        const tabRadius = radius + tabHeight * dir;
+        const headStartAngle = midAngle - (headW / radius);
+        const headEndAngle = midAngle + (headW / radius);
+
+        // Кривая вверх по левой стороне
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = startAngle + (headStartAngle - startAngle) * t;
+            const r = radius + tabHeight * dir * this.smoothStep(t);
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Верхняя дуга замка
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = headStartAngle + (headEndAngle - headStartAngle) * t;
+            const bulge = Math.sin(t * Math.PI) * tabHeight * 0.15 * dir;
+            const r = tabRadius + bulge;
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Кривая вниз по правой стороне
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = headEndAngle + (endAngle - headEndAngle) * t;
+            const r = radius + tabHeight * dir * (1 - this.smoothStep(t));
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Правая часть после замка
+        points.push({
+            x: cx + Math.cos(endAngle) * radius,
+            y: cy + Math.sin(endAngle) * radius
+        });
+
+        return points;
+    }
+
+    smoothStep(t) {
+        return t * t * (3 - 2 * t);
+    }
+
+    generateTabPoints(p1, p2, tab) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+
         const tx = dx / len;
         const ty = dy / len;
         const nx = -ty;
         const ny = tx;
 
-        // Направление замка (1 = выступ, -1 = впадина)
-        const dir = type;
+        const dir = tab.dir;
+        const neckW = tab.neckWidth;
+        const headW = tab.headWidth;
+        const tabH = tab.height;
 
-        // Функция для вычисления точки
-        // t = позиция вдоль ребра (0-1)
-        // h = высота перпендикулярно ребру (в долях длины ребра)
         const P = (t, h) => {
             const hScaled = h * dir * len;
             return {
-                x: x1 + t * len * tx + hScaled * nx,
-                y: y1 + t * len * ty + hScaled * ny
+                x: p1.x + t * len * tx + hScaled * nx,
+                y: p1.y + t * len * ty + hScaled * ny
             };
         };
-        
+
+        const points = [];
+        const nL = 0.5 - neckW;
+        const nR = 0.5 + neckW;
+        const hL = 0.5 - headW;
+        const hR = 0.5 + headW;
+
+        points.push(P(0, 0));
+        points.push(P(nL, 0));
+
+        const steps = 8;
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            points.push(this.cubicBezier(
+                P(nL, 0),
+                P(nL, tabH * 0.4),
+                P(hL, tabH * 0.6),
+                P(hL, tabH),
+                t
+            ));
+        }
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            points.push(this.cubicBezier(
+                P(hL, tabH),
+                P(hL, tabH + 0.06),
+                P(hR, tabH + 0.06),
+                P(hR, tabH),
+                t
+            ));
+        }
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            points.push(this.cubicBezier(
+                P(hR, tabH),
+                P(hR, tabH * 0.6),
+                P(nR, tabH * 0.4),
+                P(nR, 0),
+                t
+            ));
+        }
+
+        points.push(P(1, 0));
+        return points;
+    }
+
+    cubicBezier(p0, p1, p2, p3, t) {
+        const it = 1 - t;
+        return {
+            x: it*it*it*p0.x + 3*it*it*t*p1.x + 3*it*t*t*p2.x + t*t*t*p3.x,
+            y: it*it*it*p0.y + 3*it*it*t*p1.y + 3*it*t*t*p2.y + t*t*t*p3.y
+        };
+    }
+
+    buildCircularPiece(ringIndex, sectorIndex, numRings) {
+        const { cx, cy, radius } = this.circleBounds;
+        const ring = this.ringConfig[ringIndex];
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
-        // Параметры замка (оптимизированы для избежания пересечений)
-        const neckW = 0.10;   // Полуширина шейки
-        const headW = 0.14;   // Полуширина головки (шире шейки для зацепления)
-        const tabH = 0.18;    // Высота замка
+        const angle1 = (sectorIndex / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+        const angle2 = ((sectorIndex + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
 
-        // Ключевые позиции
-        const nL = 0.5 - neckW;  // Левый край шейки
-        const nR = 0.5 + neckW;  // Правый край шейки
+        // Радиальные рёбра (с замками)
+        const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
+        const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
 
-        let path = '';
+        // Простые дуги без замков (стабильный вариант)
+        const innerArcPoints = this.generateSimpleArc(cx, cy, ring.innerRadius, angle1, angle2);
+        const outerArcPoints = this.generateSimpleArc(cx, cy, ring.outerRadius, angle1, angle2);
 
-        // Линия до начала шейки
-        path += ` L ${fmt(P(nL, 0))}`;
+        let d = '';
 
-        // Кривая вверх по левой стороне шейки к головке
-        path += ` C ${fmt(P(nL, tabH * 0.5))}`;
-        path += `, ${fmt(P(0.5 - headW, tabH * 0.5))}`;
-        path += `, ${fmt(P(0.5 - headW, tabH))}`;
+        // Начинаем с внутреннего левого угла
+        d = `M ${fmt(innerArcPoints[0])}`;
 
-        // Скруглённый верх головки
-        path += ` C ${fmt(P(0.5 - headW, tabH + headW * 0.55))}`;
-        path += `, ${fmt(P(0.5 + headW, tabH + headW * 0.55))}`;
-        path += `, ${fmt(P(0.5 + headW, tabH))}`;
+        // Левое радиальное ребро (от внутреннего к внешнему)
+        for (let i = 1; i < leftRadial.points.length; i++) {
+            d += ` L ${fmt(leftRadial.points[i])}`;
+        }
 
-        // Кривая вниз по правой стороне
-        path += ` C ${fmt(P(0.5 + headW, tabH * 0.5))}`;
-        path += `, ${fmt(P(nR, tabH * 0.5))}`;
-        path += `, ${fmt(P(nR, 0))}`;
+        // Внешняя дуга (слева направо)
+        for (let i = 1; i < outerArcPoints.length; i++) {
+            d += ` L ${fmt(outerArcPoints[i])}`;
+        }
 
-        // Линия до конца ребра
-        path += ` L ${fmt(P(1, 0))}`;
+        // Правое радиальное ребро (от внешнего к внутреннему)
+        for (let i = rightRadial.points.length - 2; i >= 0; i--) {
+            d += ` L ${fmt(rightRadial.points[i])}`;
+        }
 
-        return path;
+        // Внутренняя дуга (справа налево)
+        for (let i = innerArcPoints.length - 2; i >= 0; i--) {
+            d += ` L ${fmt(innerArcPoints[i])}`;
+        }
+
+        d += ' Z';
+
+        // Центр детали для нумерации
+        const midAngle = (angle1 + angle2) / 2;
+        const midRadius = (ring.innerRadius + ring.outerRadius) / 2;
+        const center = {
+            x: cx + Math.cos(midAngle) * midRadius,
+            y: cy + Math.sin(midAngle) * midRadius
+        };
+
+        return { path: d, center, ring: ringIndex, sector: sectorIndex };
     }
+
+    // Генерация дуги с замком в середине
+    generateArcWithTab(cx, cy, radius, startAngle, endAngle, tabDir) {
+        const points = [];
+        const midAngle = (startAngle + endAngle) / 2;
+        const arcLength = Math.abs(endAngle - startAngle) * radius;
+
+        // Если замок не нужен (tabDir === 0) или дуга слишком короткая
+        if (tabDir === 0 || arcLength < 20) {
+            return this.generateSimpleArc(cx, cy, radius, startAngle, endAngle);
+        }
+
+        // Параметры замка
+        const tabHeight = Math.min(arcLength * 0.25, radius * 0.15);
+        const tabWidth = arcLength * 0.3; // Ширина замка в длине дуги
+        const tabWidthAngle = tabWidth / radius; // В радианах
+
+        const tabStartAngle = midAngle - tabWidthAngle / 2;
+        const tabEndAngle = midAngle + tabWidthAngle / 2;
+
+        // Первая часть дуги (до замка)
+        const steps1 = 4;
+        for (let i = 0; i <= steps1; i++) {
+            const t = i / steps1;
+            const angle = startAngle + (tabStartAngle - startAngle) * t;
+            points.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+
+        // Замок (кривая Безье для плавности)
+        const tabSteps = 12;
+        for (let i = 0; i <= tabSteps; i++) {
+            const t = i / tabSteps;
+            const angle = tabStartAngle + (tabEndAngle - tabStartAngle) * t;
+
+            // Форма замка: плавная кривая с выступом/впадиной
+            const tabShape = Math.sin(t * Math.PI); // 0 -> 1 -> 0
+            const tabR = radius + tabDir * tabHeight * tabShape;
+
+            points.push({
+                x: cx + Math.cos(angle) * tabR,
+                y: cy + Math.sin(angle) * tabR
+            });
+        }
+
+        // Вторая часть дуги (после замка)
+        const steps2 = 4;
+        for (let i = 1; i <= steps2; i++) {
+            const t = i / steps2;
+            const angle = tabEndAngle + (endAngle - tabEndAngle) * t;
+            points.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+
+        return points;
+    }
+
+    // Генерация простой дуги без замков
+    generateSimpleArc(cx, cy, radius, startAngle, endAngle) {
+        const points = [];
+        const steps = 12;
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = startAngle + (endAngle - startAngle) * t;
+            points.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+        return points;
+    }
+
+    // ==================== RECTANGULAR PUZZLE ====================
+
+    generateRectangularPuzzle() {
+        const targetPieces = CONFIG.PIECES_MAP[this.state.difficulty - 1];
+        const { x, y, w, h } = this.imgBounds;
+        const aspect = w / h;
+
+        let rows = Math.round(Math.sqrt(targetPieces / aspect));
+        let cols = Math.round(targetPieces / rows);
+
+        if (rows < 2) rows = 2;
+        if (cols < 2) cols = 2;
+        if (rows > 20) rows = 20;
+        if (cols > 30) cols = 30;
+
+        this.grid = { rows, cols };
+
+        const pW = w / cols;
+        const pH = h / rows;
+        const mesh = [];
+
+        for (let r = 0; r <= rows; r++) {
+            mesh[r] = [];
+            for (let c = 0; c <= cols; c++) {
+                let px = x + c * pW;
+                let py = y + r * pH;
+
+                if (r > 0 && r < rows && c > 0 && c < cols) {
+                    px += this.rng.nextFloat(-pW * 0.12, pW * 0.12);
+                    py += this.rng.nextFloat(-pH * 0.12, pH * 0.12);
+                }
+
+                mesh[r][c] = { x: px, y: py };
+            }
+        }
+        this.rectMesh = mesh;
+
+        this.edges = { h: [], v: [] };
+
+        for (let r = 0; r <= rows; r++) {
+            this.edges.h[r] = [];
+            for (let c = 0; c < cols; c++) {
+                const p1 = mesh[r][c];
+                const p2 = mesh[r][c + 1];
+                const isBorder = (r === 0 || r === rows);
+                const tab = isBorder ? null : this.generateTabParams();
+
+                this.edges.h[r][c] = {
+                    points: this.generateEdgePoints(p1, p2, tab),
+                    isBorder
+                };
+            }
+        }
+
+        for (let r = 0; r < rows; r++) {
+            this.edges.v[r] = [];
+            for (let c = 0; c <= cols; c++) {
+                const p1 = mesh[r][c];
+                const p2 = mesh[r + 1][c];
+                const isBorder = (c === 0 || c === cols);
+                const tab = isBorder ? null : this.generateTabParams();
+
+                this.edges.v[r][c] = {
+                    points: this.generateEdgePoints(p1, p2, tab),
+                    isBorder
+                };
+            }
+        }
+
+        this.pieces = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const piece = this.buildRectPiecePath(r, c, rows, cols, mesh);
+                this.pieces.push(piece);
+            }
+        }
+    }
+
+    buildRectPiecePath(row, col, rows, cols, mesh) {
+        const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+
+        const topEdge = this.edges.h[row][col];
+        const rightEdge = this.edges.v[row][col + 1];
+        const bottomEdge = this.edges.h[row + 1][col];
+        const leftEdge = this.edges.v[row][col];
+
+        const p1 = mesh[row][col];
+
+        let d = `M ${fmt(p1)}`;
+
+        if (topEdge.points.length > 1) {
+            for (let i = 1; i < topEdge.points.length; i++) {
+                d += ` L ${fmt(topEdge.points[i])}`;
+            }
+        }
+
+        if (rightEdge.points.length > 1) {
+            for (let i = 1; i < rightEdge.points.length; i++) {
+                d += ` L ${fmt(rightEdge.points[i])}`;
+            }
+        }
+
+        if (bottomEdge.points.length > 1) {
+            for (let i = bottomEdge.points.length - 2; i >= 0; i--) {
+                d += ` L ${fmt(bottomEdge.points[i])}`;
+            }
+        }
+
+        if (leftEdge.points.length > 1) {
+            for (let i = leftEdge.points.length - 2; i >= 0; i--) {
+                d += ` L ${fmt(leftEdge.points[i])}`;
+            }
+        }
+
+        d += ' Z';
+
+        const center = {
+            x: (mesh[row][col].x + mesh[row + 1][col + 1].x) / 2,
+            y: (mesh[row][col].y + mesh[row + 1][col + 1].y) / 2
+        };
+
+        return { path: d, center, row, col };
+    }
+
+    // ==================== RENDERING ====================
 
     render() {
         const { width, height } = this.canvas;
         this.ctx.clearRect(0, 0, width, height);
-
         this.ctx.fillStyle = '#fff';
         this.ctx.fillRect(0, 0, width, height);
 
-        // Рисуем изображение с обрезкой
+        if (!this.state.image) {
+            this.renderPlaceholder();
+            return;
+        }
+
+        const isCircular = this.state.type === 'circular';
+
         this.ctx.save();
         this.ctx.beginPath();
-        this.ctx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        if (isCircular && this.circleBounds) {
+            this.ctx.arc(this.circleBounds.cx, this.circleBounds.cy, this.circleBounds.radius, 0, Math.PI * 2);
+        } else {
+            this.ctx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+        }
         this.ctx.clip();
         this.ctx.drawImage(this.state.image, this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
         this.ctx.restore();
 
-        // Рисуем линии пазла
-        this.ctx.strokeStyle = '#000';
-        this.ctx.globalAlpha = 0.85;
-        this.ctx.lineWidth = this.state.strokeWidth;
-        this.ctx.lineJoin = 'round';
-        this.ctx.lineCap = 'round';
-        
-        this.pieces.forEach(p => {
-            const path = new Path2D(p);
-            this.ctx.stroke(path);
-        });
-        
-        this.ctx.globalAlpha = 1.0;
+        if (this.state.showBorders) {
+            const strokeWidth = this.state.strokeWidth * CONFIG.MM_TO_PX;
+            this.ctx.strokeStyle = '#000';
+            this.ctx.lineWidth = strokeWidth;
+            this.ctx.lineJoin = 'round';
+            this.ctx.lineCap = 'round';
+            this.ctx.globalAlpha = 0.85;
 
-        // Рамка
-        this.ctx.lineWidth = this.state.strokeWidth * 1.5;
-        this.ctx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            this.ctx.save();
+            this.ctx.beginPath();
+            if (isCircular && this.circleBounds) {
+                this.ctx.arc(this.circleBounds.cx, this.circleBounds.cy, this.circleBounds.radius - strokeWidth/2, 0, Math.PI * 2);
+            } else {
+                this.ctx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            }
+            this.ctx.clip();
+
+            this.pieces.forEach(p => {
+                const path = new Path2D(p.path);
+                this.ctx.stroke(path);
+            });
+
+            this.ctx.restore();
+            this.ctx.globalAlpha = 1.0;
+
+            this.ctx.lineWidth = strokeWidth * 1.5;
+            if (isCircular && this.circleBounds) {
+                this.ctx.beginPath();
+                this.ctx.arc(this.circleBounds.cx, this.circleBounds.cy, this.circleBounds.radius, 0, Math.PI * 2);
+                this.ctx.stroke();
+            } else {
+                this.ctx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            }
+        }
+
+        if (this.state.numbered && this.pieces.length > 0) {
+            this.ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            this.ctx.strokeStyle = '#000';
+            this.ctx.lineWidth = 1;
+            const fontSize = Math.max(8, Math.min(14, 150 / Math.sqrt(this.pieces.length)));
+            this.ctx.font = `bold ${fontSize}px Arial`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            this.pieces.forEach((p, i) => {
+                const num = (i + 1).toString();
+                const metrics = this.ctx.measureText(num);
+                const pad = 2;
+
+                this.ctx.beginPath();
+                this.ctx.roundRect(
+                    p.center.x - metrics.width/2 - pad,
+                    p.center.y - fontSize/2 - pad,
+                    metrics.width + pad * 2,
+                    fontSize + pad * 2,
+                    3
+                );
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillText(num, p.center.x, p.center.y);
+                this.ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            });
+        }
     }
 
+    renderPlaceholder() {
+        const { width, height } = this.canvas;
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillRect(0, 0, width, height);
+
+        this.ctx.fillStyle = '#94a3b8';
+        this.ctx.font = '16px -apple-system, sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Загрузите изображение', width / 2, height / 2);
+    }
+
+    // ==================== EXPORT ====================
+
     downloadPNG(mode) {
+        if (this.pieces.length === 0) {
+            this.showToast('Сначала сгенерируйте пазл');
+            return;
+        }
+
         const tmpC = document.createElement('canvas');
         tmpC.width = this.canvas.width;
         tmpC.height = this.canvas.height;
         const tCtx = tmpC.getContext('2d');
+        const isCircular = this.state.type === 'circular';
 
         if (mode === 'cut') {
             tCtx.fillStyle = '#fff';
             tCtx.fillRect(0, 0, tmpC.width, tmpC.height);
+
+            const strokeWidth = this.state.strokeWidth * CONFIG.MM_TO_PX;
             tCtx.strokeStyle = '#000';
-            tCtx.lineWidth = this.state.strokeWidth;
+            tCtx.lineWidth = strokeWidth;
             tCtx.lineJoin = 'round';
             tCtx.lineCap = 'round';
-            this.pieces.forEach(p => tCtx.stroke(new Path2D(p)));
-            tCtx.lineWidth = this.state.strokeWidth * 1.5;
-            tCtx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+
+            tCtx.save();
+            tCtx.beginPath();
+            if (isCircular && this.circleBounds) {
+                tCtx.arc(this.circleBounds.cx, this.circleBounds.cy, this.circleBounds.radius - strokeWidth/2, 0, Math.PI * 2);
+            } else {
+                tCtx.rect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            }
+            tCtx.clip();
+
+            this.pieces.forEach(p => {
+                tCtx.stroke(new Path2D(p.path));
+            });
+            tCtx.restore();
+
+            tCtx.lineWidth = strokeWidth * 1.5;
+            if (isCircular && this.circleBounds) {
+                tCtx.beginPath();
+                tCtx.arc(this.circleBounds.cx, this.circleBounds.cy, this.circleBounds.radius, 0, Math.PI * 2);
+                tCtx.stroke();
+            } else {
+                tCtx.strokeRect(this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
+            }
         } else {
             tCtx.drawImage(this.canvas, 0, 0);
         }
@@ -689,19 +1483,46 @@ class PuzzleApp {
         link.download = `puzzle-${mode}-${Date.now()}.png`;
         link.href = tmpC.toDataURL('image/png');
         link.click();
-        this.showToast('PNG скачан!');
+        this.showToast('PNG сохранён!');
     }
 
     downloadSVG() {
+        if (this.pieces.length === 0) {
+            this.showToast('Сначала сгенерируйте пазл');
+            return;
+        }
+
         const { width, height } = this.canvas;
         const b = this.imgBounds;
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
-        svg += `<defs><clipPath id="c"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/></clipPath></defs>`;
-        svg += `<image href="${this.state.image.src}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" clip-path="url(#c)"/>`;
-        svg += `<g fill="none" stroke="#000" stroke-width="${this.state.strokeWidth}" stroke-linejoin="round" stroke-linecap="round">`;
-        this.pieces.forEach(p => svg += `<path d="${p}"/>`);
-        svg += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" stroke-width="${this.state.strokeWidth*1.5}"/>`;
-        svg += `</g></svg>`;
+        const strokeWidth = this.state.strokeWidth * CONFIG.MM_TO_PX;
+        const isCircular = this.state.type === 'circular';
+
+        let clipDef = '';
+        let border = '';
+
+        if (isCircular && this.circleBounds) {
+            clipDef = `<circle cx="${this.circleBounds.cx.toFixed(2)}" cy="${this.circleBounds.cy.toFixed(2)}" r="${this.circleBounds.radius.toFixed(2)}"/>`;
+            border = `<circle cx="${this.circleBounds.cx.toFixed(2)}" cy="${this.circleBounds.cy.toFixed(2)}" r="${this.circleBounds.radius.toFixed(2)}" stroke-width="${(strokeWidth*1.5).toFixed(2)}"/>`;
+        } else {
+            clipDef = `<rect x="${b.x.toFixed(2)}" y="${b.y.toFixed(2)}" width="${b.w.toFixed(2)}" height="${b.h.toFixed(2)}"/>`;
+            border = `<rect x="${b.x.toFixed(2)}" y="${b.y.toFixed(2)}" width="${b.w.toFixed(2)}" height="${b.h.toFixed(2)}" stroke-width="${(strokeWidth*1.5).toFixed(2)}"/>`;
+        }
+
+        let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width.toFixed(0)}" height="${height.toFixed(0)}" viewBox="0 0 ${width.toFixed(0)} ${height.toFixed(0)}">
+<defs>
+<clipPath id="imgClip">${clipDef}</clipPath>
+</defs>
+<image href="${this.state.image.src}" x="${b.x.toFixed(2)}" y="${b.y.toFixed(2)}" width="${b.w.toFixed(2)}" height="${b.h.toFixed(2)}" clip-path="url(#imgClip)"/>
+<g fill="none" stroke="#000" stroke-width="${strokeWidth.toFixed(2)}" stroke-linejoin="round" stroke-linecap="round">
+`;
+
+        this.pieces.forEach(p => {
+            svg += `<path d="${p.path}"/>\n`;
+        });
+
+        svg += border + '\n';
+        svg += `</g>\n</svg>`;
 
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
@@ -710,68 +1531,75 @@ class PuzzleApp {
         a.download = `puzzle-${Date.now()}.svg`;
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('SVG скачан!');
+        this.showToast('SVG сохранён!');
     }
 
     downloadDXF() {
+        if (this.pieces.length === 0) {
+            this.showToast('Сначала сгенерируйте пазл');
+            return;
+        }
+
         const pxPerMm = CONFIG.MM_TO_PX;
-        const hMM = this.canvas.height / pxPerMm; 
-        
+        const hMM = this.canvas.height / pxPerMm;
+        const isCircular = this.state.type === 'circular';
+
         let dxf = `0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC\n`;
         dxf += `0\nSECTION\n2\nENTITIES\n`;
 
-        const writePoly = (pts) => {
-            if (pts.length < 2) return '';
-            let out = `0\nLWPOLYLINE\n8\nCUT\n90\n${pts.length}\n70\n1\n`;
-            pts.forEach(p => {
-                out += `10\n${(p.x/pxPerMm).toFixed(4)}\n20\n${(hMM-(p.y/pxPerMm)).toFixed(4)}\n`;
-            });
-            return out;
-        };
-
         const pathToPoints = (pathStr) => {
             const points = [];
-            const cmds = pathStr.match(/[MLCZ][^MLCZ]*/gi) || [];
-            let cx = 0, cy = 0;
+            const cmds = pathStr.match(/[MLZ][^MLZ]*/gi) || [];
             cmds.forEach(cmd => {
                 const type = cmd[0].toUpperCase();
-                const v = cmd.slice(1).trim().split(/[\s,]+/).filter(x=>x).map(parseFloat);
-                if (type === 'M' || type === 'L') {
-                    cx = v[0]; cy = v[1];
-                    points.push({x:cx, y:cy});
-                } else if (type === 'C') {
-                    const step = 0.1;
-                    for (let t=step; t<=1; t+=step) {
-                        const it = 1-t;
-                        const x = it*it*it*cx + 3*it*it*t*v[0] + 3*it*t*t*v[2] + t*t*t*v[4];
-                        const y = it*it*it*cy + 3*it*it*t*v[1] + 3*it*t*t*v[3] + t*t*t*v[5];
-                        points.push({x,y});
-                    }
-                    cx = v[4]; cy = v[5];
+                const vals = cmd.slice(1).trim().split(/[\s,]+/).filter(x => x).map(parseFloat);
+                if ((type === 'M' || type === 'L') && vals.length >= 2) {
+                    points.push({ x: vals[0], y: vals[1] });
                 }
             });
             return points;
         };
 
-        this.pieces.forEach(p => dxf += writePoly(pathToPoints(p)));
-        
-        const b = this.imgBounds;
-        const borderPts = [
-            {x:b.x, y:b.y}, {x:b.x+b.w, y:b.y}, 
-            {x:b.x+b.w, y:b.y+b.h}, {x:b.x, y:b.y+b.h}
-        ];
-        dxf += writePoly(borderPts);
+        const writePolyline = (pts) => {
+            if (pts.length < 2) return '';
+            let out = `0\nLWPOLYLINE\n8\nPUZZLE_CUT\n90\n${pts.length}\n70\n1\n`;
+            pts.forEach(p => {
+                out += `10\n${(p.x / pxPerMm).toFixed(4)}\n`;
+                out += `20\n${(hMM - p.y / pxPerMm).toFixed(4)}\n`;
+            });
+            return out;
+        };
+
+        this.pieces.forEach(p => {
+            dxf += writePolyline(pathToPoints(p.path));
+        });
+
+        if (isCircular && this.circleBounds) {
+            const cx = (this.circleBounds.cx / pxPerMm).toFixed(4);
+            const cy = (hMM - this.circleBounds.cy / pxPerMm).toFixed(4);
+            const r = (this.circleBounds.radius / pxPerMm).toFixed(4);
+            dxf += `0\nCIRCLE\n8\nBORDER\n10\n${cx}\n20\n${cy}\n40\n${r}\n`;
+        } else {
+            const b = this.imgBounds;
+            const borderPts = [
+                { x: b.x, y: b.y },
+                { x: b.x + b.w, y: b.y },
+                { x: b.x + b.w, y: b.y + b.h },
+                { x: b.x, y: b.y + b.h }
+            ];
+            dxf += writePolyline(borderPts);
+        }
 
         dxf += `0\nENDSEC\n0\nEOF\n`;
-        
+
         const blob = new Blob([dxf], { type: 'application/dxf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `puzzle-${Date.now()}.dxf`;
+        a.download = `puzzle-cnc-${Date.now()}.dxf`;
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('DXF скачан!');
+        this.showToast('DXF сохранён!');
     }
 
     showToast(msg) {
@@ -782,7 +1610,9 @@ class PuzzleApp {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => { window.app = new PuzzleApp(); });
+document.addEventListener('DOMContentLoaded', () => {
+    window.puzzleApp = new PuzzleGenerator();
+});
 </script>
 </body>
 </html>
