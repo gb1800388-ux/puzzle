@@ -1162,10 +1162,10 @@ class PuzzleGenerator {
         const midAngle = (startAngle + endAngle) / 2;
         const angleSpan = endAngle - startAngle;
 
-        // Параметры замка
-        const tabHeight = Math.min(arcLength * 0.22, radius * 0.10) * tabDir;
-        const neckHalfWidth = angleSpan * 0.05;
-        const headHalfWidth = angleSpan * 0.12;
+        // Параметры замка (шире головка, уже шейка, ниже высота)
+        const tabHeight = Math.min(arcLength * 0.18, radius * 0.08) * tabDir;
+        const neckHalfWidth = angleSpan * 0.035;
+        const headHalfWidth = angleSpan * 0.13;
 
         // Функция для создания точки в полярных координатах
         const polarPoint = (angle, r) => ({
@@ -1209,25 +1209,25 @@ class PuzzleGenerator {
             ));
         }
 
-        // Левая часть головки: от шейки к вершине (безье)
+        // Левая часть головки: от шейки к вершине (безье) - более округлая
         for (let i = 1; i <= curveSteps; i++) {
             const t = i / curveSteps;
             points.push(bezierPolar(
                 neckStartAngle, radius + tabHeight * 0.5,
-                neckStartAngle - neckHalfWidth * 0.5, radius + tabHeight * 0.85,
-                headStartAngle, radius + tabHeight,
-                midAngle, radius + tabHeight,
+                neckStartAngle, radius + tabHeight * 0.9,
+                headStartAngle, radius + tabHeight * 1.05,
+                midAngle, radius + tabHeight * 1.05,
                 t
             ));
         }
 
-        // Правая часть головки: от вершины к шейке (безье)
+        // Правая часть головки: от вершины к шейке (безье) - более округлая
         for (let i = 1; i <= curveSteps; i++) {
             const t = i / curveSteps;
             points.push(bezierPolar(
-                midAngle, radius + tabHeight,
-                headEndAngle, radius + tabHeight,
-                neckEndAngle + neckHalfWidth * 0.5, radius + tabHeight * 0.85,
+                midAngle, radius + tabHeight * 1.05,
+                headEndAngle, radius + tabHeight * 1.05,
+                neckEndAngle, radius + tabHeight * 0.9,
                 neckEndAngle, radius + tabHeight * 0.5,
                 t
             ));
