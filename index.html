@@ -620,22 +620,16 @@ class PuzzleGenerator {
         const { cx, cy, radius } = this.circleBounds;
 
         // Определяем количество колец и секторов
-        // Чем больше деталей, тем больше колец
         let numRings = Math.max(3, Math.min(8, Math.round(Math.sqrt(targetPieces / 8))));
 
-        // Радиус центральной детали (уникальный корневой пазл)
-        this.centerRadius = radius * 0.08; // 8% от общего радиуса
-
         // Определяем количество секторов в каждом кольце
-        // Внутренние кольца имеют меньше секторов
         this.ringConfig = [];
-        let totalPieces = 1; // +1 для центральной детали
+        let totalPieces = 1;
 
         // Базовое количество секторов для первого кольца
         let baseSectors = Math.max(6, Math.round(targetPieces / numRings / 2));
 
         for (let r = 0; r < numRings; r++) {
-            // Количество секторов растёт с каждым кольцом
             let sectors;
             if (r === 0) {
                 sectors = Math.max(6, Math.round(baseSectors * 0.6));
@@ -644,38 +638,56 @@ class PuzzleGenerator {
                 const growthFactor = 1 + (0.2 + this.rng.nextFloat(0, 0.2));
                 sectors = Math.round(prevSectors * growthFactor);
             }
-
             sectors = Math.min(sectors, 30);
-
-            // Сдвиг для шахматного порядка (в радианах)
-            const offset = (r % 2 === 1) ? (Math.PI / sectors) : 0;
-
-            // Первое кольцо начинается от края центральной детали
-            const innerR = (r === 0) ? this.centerRadius : this.ringConfig[r - 1].outerRadius;
-            const outerR = this.centerRadius + ((r + 1) / numRings) * (radius - this.centerRadius);
-
-            this.ringConfig.push({
-                sectors: sectors,
-                offset: offset,
-                innerRadius: innerR,
-                outerRadius: outerR
-            });
-
+            this.ringConfig.push({ sectors });
             totalPieces += sectors;
         }
 
-        // Генерируем уникальную форму центральной детали
-        this.centerPieceEdges = this.generateCenterPieceEdges();
+        // Радиус центральной детали - такой чтобы площадь была ~равна деталям первого кольца
+        const firstRingSectors = this.ringConfig[0].sectors;
+        // Площадь центральной детали = π * centerR²
+        // Площадь одной детали первого кольца ≈ π * (outerR² - centerR²) / sectors
+        // Для равенства: centerR² ≈ (outerR² - centerR²) / sectors
+        // centerR² * (sectors + 1) = outerR²
+        // centerR = outerR / sqrt(sectors + 1)
+        // Если первое кольцо занимает ~20% радиуса, outerR1 ≈ 0.25 * radius
+        const firstRingOuterRadius = radius * 0.28;
+        this.centerRadius = firstRingOuterRadius / Math.sqrt(firstRingSectors + 1);
+        this.centerRadius = Math.max(this.centerRadius, radius * 0.08);
+        this.centerRadius = Math.min(this.centerRadius, radius * 0.18);
 
-        // Генерируем рёбра для каждого кольца
-        this.circularEdges = { radial: [], arc: [] };
+        // Теперь рассчитываем радиусы колец
+        for (let r = 0; r < numRings; r++) {
+            const innerR = (r === 0) ? this.centerRadius : this.ringConfig[r - 1].outerRadius;
+            const outerR = this.centerRadius + ((r + 1) / numRings) * (radius - this.centerRadius);
+
+            // Сдвиг для шахматного порядка
+            const offset = (r % 2 === 1) ? (Math.PI / this.ringConfig[r].sectors) : 0;
+
+            this.ringConfig[r].offset = offset;
+            this.ringConfig[r].innerRadius = innerR;
+            this.ringConfig[r].outerRadius = outerR;
+        }
+
+        // Генерируем границы между кольцами (общие рёбра)
+        // ringBoundaries[r] - граница между кольцом r-1 и r (или центром и кольцом 0)
+        this.ringBoundaries = [];
+
+        // Граница 0: между центром и первым кольцом
+        this.ringBoundaries[0] = this.generateRingBoundary(0);
+
+        // Границы между кольцами
+        for (let r = 1; r < numRings; r++) {
+            this.ringBoundaries[r] = this.generateRingBoundary(r);
+        }
+
+        // Генерируем радиальные рёбра для каждого кольца
+        this.circularEdges = { radial: [] };
 
         for (let r = 0; r < numRings; r++) {
             const ring = this.ringConfig[r];
             this.circularEdges.radial[r] = [];
-            this.circularEdges.arc[r] = [];
 
-            // Радиальные рёбра (от внутреннего радиуса к внешнему)
             for (let s = 0; s < ring.sectors; s++) {
                 const angle = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
 
@@ -688,7 +700,6 @@ class PuzzleGenerator {
                     y: cy + Math.sin(angle) * ring.outerRadius
                 };
 
-                // Генерируем замки для всех радиальных рёбер
                 const tab = this.generateTabParams();
 
                 this.circularEdges.radial[r][s] = {
@@ -697,32 +708,16 @@ class PuzzleGenerator {
                     outerPt
                 };
             }
-
-            // Дуговые рёбра (вдоль кольца между секторами)
-            for (let s = 0; s < ring.sectors; s++) {
-                const angle1 = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
-                const angle2 = ((s + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
-
-                // На внешнем кольце (последнем) нет замков
-                const isOuterRing = (r === numRings - 1);
-                const tab = isOuterRing ? null : this.generateTabParams();
-
-                this.circularEdges.arc[r][s] = {
-                    points: this.generateArcPoints(cx, cy, ring.outerRadius, angle1, angle2, tab),
-                    angle1,
-                    angle2
-                };
-            }
         }
 
         // Создаём детали
         this.pieces = [];
 
-        // Сначала центральная деталь
+        // Центральная деталь
         const centerPiece = this.buildCenterPiece();
         this.pieces.push(centerPiece);
 
-        // Затем все кольца
+        // Все кольца
         for (let r = 0; r < numRings; r++) {
             const ring = this.ringConfig[r];
             for (let s = 0; s < ring.sectors; s++) {
@@ -732,51 +727,124 @@ class PuzzleGenerator {
         }
     }
 
-    // Генерация уникальной формы центральной детали
-    generateCenterPieceEdges() {
-        const { cx, cy } = this.circleBounds;
-        const firstRing = this.ringConfig[0];
-        const numSectors = firstRing.sectors;
-        const edges = [];
+    // Генерация границы между кольцами (полный круг с замками)
+    generateRingBoundary(ringIndex) {
+        const { cx, cy, radius } = this.circleBounds;
+        const boundaryRadius = (ringIndex === 0) ? this.centerRadius : this.ringConfig[ringIndex - 1].outerRadius;
+        const numRings = this.ringConfig.length;
+        const isOuterBoundary = (ringIndex === numRings);
 
-        // Создаём рёбра для каждого сектора первого кольца
-        for (let s = 0; s < numSectors; s++) {
-            const angle1 = (s / numSectors) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
-            const angle2 = ((s + 1) / numSectors) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
+        // Определяем количество замков на этой границе
+        // Используем количество секторов большего кольца
+        let numTabs;
+        if (ringIndex === 0) {
+            numTabs = this.ringConfig[0].sectors;
+        } else if (ringIndex >= numRings) {
+            numTabs = 0;
+        } else {
+            numTabs = Math.max(this.ringConfig[ringIndex - 1].sectors, this.ringConfig[ringIndex].sectors);
+        }
 
-            // Генерируем дугу с замком для края центральной детали
-            const tab = this.generateTabParams();
-            const arcPoints = this.generateArcPoints(cx, cy, this.centerRadius, angle1, angle2, tab);
+        // Создаём массив точек для полной окружности с замками
+        const boundaryPoints = [];
+        const angleStep = (Math.PI * 2) / Math.max(numTabs, 12);
 
-            edges.push({
-                points: arcPoints,
+        for (let i = 0; i < numTabs; i++) {
+            const angle1 = i * angleStep - Math.PI / 2;
+            const angle2 = (i + 1) * angleStep - Math.PI / 2;
+
+            const tab = isOuterBoundary ? null : this.generateTabParams();
+            const arcPoints = this.generateArcPoints(cx, cy, boundaryRadius, angle1, angle2, tab);
+
+            boundaryPoints.push({
                 angle1,
-                angle2
+                angle2,
+                points: arcPoints,
+                tab
             });
         }
 
-        return edges;
+        return {
+            radius: boundaryRadius,
+            segments: boundaryPoints
+        };
     }
 
-    // Построение центральной детали
+    // Получить точки границы для заданного диапазона углов
+    getBoundaryPoints(boundaryIndex, startAngle, endAngle) {
+        const boundary = this.ringBoundaries[boundaryIndex];
+        if (!boundary) return null;
+
+        const { cx, cy } = this.circleBounds;
+        const result = [];
+
+        // Нормализуем углы
+        while (startAngle < -Math.PI) startAngle += Math.PI * 2;
+        while (startAngle > Math.PI) startAngle -= Math.PI * 2;
+        while (endAngle < startAngle) endAngle += Math.PI * 2;
+
+        // Собираем точки из сегментов, попадающих в диапазон
+        for (const segment of boundary.segments) {
+            let segStart = segment.angle1;
+            let segEnd = segment.angle2;
+
+            // Нормализуем
+            while (segStart < -Math.PI) segStart += Math.PI * 2;
+            while (segStart > Math.PI) segStart -= Math.PI * 2;
+            while (segEnd < segStart) segEnd += Math.PI * 2;
+
+            // Проверяем пересечение
+            if (segEnd >= startAngle && segStart <= endAngle) {
+                for (const pt of segment.points) {
+                    result.push({ ...pt });
+                }
+            }
+        }
+
+        // Если не нашли подходящих сегментов, генерируем простую дугу
+        if (result.length === 0) {
+            const steps = 8;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const angle = startAngle + (endAngle - startAngle) * t;
+                result.push({
+                    x: cx + Math.cos(angle) * boundary.radius,
+                    y: cy + Math.sin(angle) * boundary.radius
+                });
+            }
+        }
+
+        return result;
+    }
+
+    // Построение центральной детали используя границу 0
     buildCenterPiece() {
         const { cx, cy } = this.circleBounds;
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
+        const boundary = this.ringBoundaries[0];
+        if (!boundary || !boundary.segments.length) {
+            // Fallback: простой круг
+            return {
+                path: `M ${(cx + this.centerRadius).toFixed(2)} ${cy.toFixed(2)} A ${this.centerRadius.toFixed(2)} ${this.centerRadius.toFixed(2)} 0 1 1 ${(cx - this.centerRadius).toFixed(2)} ${cy.toFixed(2)} A ${this.centerRadius.toFixed(2)} ${this.centerRadius.toFixed(2)} 0 1 1 ${(cx + this.centerRadius).toFixed(2)} ${cy.toFixed(2)} Z`,
+                center: { x: cx, y: cy },
+                isCenter: true
+            };
+        }
+
         let d = '';
         let first = true;
 
-        // Обходим все рёбра центральной детали
-        for (let i = 0; i < this.centerPieceEdges.length; i++) {
-            const edge = this.centerPieceEdges[i];
-
-            if (first) {
-                d = `M ${fmt(edge.points[0])}`;
-                first = false;
-            }
-
-            for (let j = 1; j < edge.points.length; j++) {
-                d += ` L ${fmt(edge.points[j])}`;
+        // Обходим все сегменты границы
+        for (const segment of boundary.segments) {
+            for (let j = 0; j < segment.points.length; j++) {
+                const pt = segment.points[j];
+                if (first) {
+                    d = `M ${fmt(pt)}`;
+                    first = false;
+                } else {
+                    d += ` L ${fmt(pt)}`;
+                }
             }
         }
 
@@ -1035,122 +1103,48 @@ class PuzzleGenerator {
         const angle1 = (sectorIndex / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
         const angle2 = ((sectorIndex + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
 
-        // Четыре угла детали
-        const innerLeft = {
-            x: cx + Math.cos(angle1) * ring.innerRadius,
-            y: cy + Math.sin(angle1) * ring.innerRadius
-        };
-        const innerRight = {
-            x: cx + Math.cos(angle2) * ring.innerRadius,
-            y: cy + Math.sin(angle2) * ring.innerRadius
-        };
-        const outerLeft = {
-            x: cx + Math.cos(angle1) * ring.outerRadius,
-            y: cy + Math.sin(angle1) * ring.outerRadius
-        };
-        const outerRight = {
-            x: cx + Math.cos(angle2) * ring.outerRadius,
-            y: cy + Math.sin(angle2) * ring.outerRadius
-        };
-
-        // Рёбра
+        // Радиальные рёбра
         const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
         const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
-        const outerArc = this.circularEdges.arc[ringIndex][sectorIndex];
 
-        // Внутренняя дуга - если это не центральное кольцо
-        let innerArcPoints = null;
-        if (ringIndex > 0) {
-            // Генерируем внутреннюю дугу с замком
-            const prevRing = this.ringConfig[ringIndex - 1];
-            const tab = this.generateTabParams();
-            innerArcPoints = this.generateArcPoints(cx, cy, ring.innerRadius, angle1, angle2, tab);
-        }
+        // Получаем точки внутренней и внешней дуги из общих границ
+        const innerBoundary = this.ringBoundaries[ringIndex];
+        const outerBoundary = this.ringBoundaries[ringIndex + 1];
+
+        // Генерируем точки дуг
+        const innerArcPoints = this.getArcPointsFromBoundary(innerBoundary, angle1, angle2);
+        const outerArcPoints = outerBoundary ?
+            this.getArcPointsFromBoundary(outerBoundary, angle1, angle2) :
+            this.generateSimpleArc(cx, cy, ring.outerRadius, angle1, angle2);
 
         let d = '';
 
-        if (ringIndex === 0) {
-            // Первое кольцо - соединяется с центральной деталью
-            // Используем ребро центральной детали как внутренний край
-            const centerEdge = this.centerPieceEdges[sectorIndex];
+        // Начинаем с внутреннего левого угла
+        const startPt = innerArcPoints[0];
+        d = `M ${fmt(startPt)}`;
 
-            // Начинаем с точки на внутреннем радиусе (край центральной детали)
-            d = `M ${fmt(innerLeft)}`;
-
-            // Левое радиальное ребро (от внутреннего к внешнему)
-            if (leftRadial.points.length > 1) {
-                for (let i = 1; i < leftRadial.points.length; i++) {
-                    d += ` L ${fmt(leftRadial.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(outerLeft)}`;
+        // Левое радиальное ребро (от внутреннего к внешнему)
+        if (leftRadial.points.length > 1) {
+            for (let i = 1; i < leftRadial.points.length; i++) {
+                d += ` L ${fmt(leftRadial.points[i])}`;
             }
+        }
 
-            // Внешняя дуга
-            if (outerArc.points.length > 1) {
-                for (let i = 1; i < outerArc.points.length; i++) {
-                    d += ` L ${fmt(outerArc.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(outerRight)}`;
-            }
+        // Внешняя дуга (слева направо)
+        for (let i = 1; i < outerArcPoints.length; i++) {
+            d += ` L ${fmt(outerArcPoints[i])}`;
+        }
 
-            // Правое радиальное ребро (от внешнего к внутреннему)
-            if (rightRadial.points.length > 1) {
-                for (let i = rightRadial.points.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(rightRadial.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(innerRight)}`;
+        // Правое радиальное ребро (от внешнего к внутреннему)
+        if (rightRadial.points.length > 1) {
+            for (let i = rightRadial.points.length - 2; i >= 0; i--) {
+                d += ` L ${fmt(rightRadial.points[i])}`;
             }
+        }
 
-            // Внутренняя дуга (ребро центральной детали, в обратном направлении)
-            if (centerEdge.points.length > 1) {
-                for (let i = centerEdge.points.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(centerEdge.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(innerLeft)}`;
-            }
-        } else {
-            // Обычное кольцо
-            d = `M ${fmt(innerLeft)}`;
-
-            // Левое радиальное ребро (от внутреннего к внешнему)
-            if (leftRadial.points.length > 1) {
-                for (let i = 1; i < leftRadial.points.length; i++) {
-                    d += ` L ${fmt(leftRadial.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(outerLeft)}`;
-            }
-
-            // Внешняя дуга
-            if (outerArc.points.length > 1) {
-                for (let i = 1; i < outerArc.points.length; i++) {
-                    d += ` L ${fmt(outerArc.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(outerRight)}`;
-            }
-
-            // Правое радиальное ребро (от внешнего к внутреннему)
-            if (rightRadial.points.length > 1) {
-                for (let i = rightRadial.points.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(rightRadial.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(innerRight)}`;
-            }
-
-            // Внутренняя дуга (в обратном направлении)
-            if (innerArcPoints && innerArcPoints.length > 1) {
-                for (let i = innerArcPoints.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(innerArcPoints[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(innerLeft)}`;
-            }
+        // Внутренняя дуга (справа налево, в обратном направлении)
+        for (let i = innerArcPoints.length - 2; i >= 0; i--) {
+            d += ` L ${fmt(innerArcPoints[i])}`;
         }
 
         d += ' Z';
@@ -1164,6 +1158,87 @@ class PuzzleGenerator {
         };
 
         return { path: d, center, ring: ringIndex, sector: sectorIndex };
+    }
+
+    // Получить точки дуги из границы для заданного диапазона углов
+    getArcPointsFromBoundary(boundary, startAngle, endAngle) {
+        const { cx, cy } = this.circleBounds;
+
+        if (!boundary || !boundary.segments || boundary.segments.length === 0) {
+            return this.generateSimpleArc(cx, cy, boundary ? boundary.radius : this.centerRadius, startAngle, endAngle);
+        }
+
+        const result = [];
+        const tolerance = 0.01; // ~0.5 градуса
+
+        // Нормализуем целевые углы к диапазону [-PI, PI]
+        let normStart = startAngle;
+        let normEnd = endAngle;
+        while (normStart < -Math.PI) normStart += Math.PI * 2;
+        while (normStart > Math.PI) normStart -= Math.PI * 2;
+        while (normEnd < normStart) normEnd += Math.PI * 2;
+
+        // Ищем сегменты, попадающие в наш диапазон
+        for (const segment of boundary.segments) {
+            let segStart = segment.angle1;
+            let segEnd = segment.angle2;
+
+            // Нормализуем углы сегмента
+            while (segStart < -Math.PI) segStart += Math.PI * 2;
+            while (segStart > Math.PI) segStart -= Math.PI * 2;
+            while (segEnd < segStart) segEnd += Math.PI * 2;
+
+            // Проверяем пересечение с циклическим учётом
+            const overlaps = (segEnd >= normStart - tolerance && segStart <= normEnd + tolerance) ||
+                            (segEnd + Math.PI * 2 >= normStart - tolerance && segStart + Math.PI * 2 <= normEnd + tolerance);
+
+            if (overlaps) {
+                for (const pt of segment.points) {
+                    // Проверяем, что точка попадает в нужный угловой диапазон
+                    const ptAngle = Math.atan2(pt.y - cy, pt.x - cx);
+                    let normPtAngle = ptAngle;
+                    while (normPtAngle < normStart - tolerance) normPtAngle += Math.PI * 2;
+
+                    if (normPtAngle >= normStart - tolerance && normPtAngle <= normEnd + tolerance) {
+                        // Избегаем дубликатов
+                        if (result.length === 0 ||
+                            Math.abs(result[result.length-1].x - pt.x) > 0.1 ||
+                            Math.abs(result[result.length-1].y - pt.y) > 0.1) {
+                            result.push({ x: pt.x, y: pt.y });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Если не нашли достаточно точек, генерируем простую дугу
+        if (result.length < 2) {
+            return this.generateSimpleArc(cx, cy, boundary.radius, startAngle, endAngle);
+        }
+
+        // Сортируем точки по углу
+        result.sort((a, b) => {
+            const angleA = Math.atan2(a.y - cy, a.x - cx);
+            const angleB = Math.atan2(b.y - cy, b.x - cx);
+            return angleA - angleB;
+        });
+
+        return result;
+    }
+
+    // Генерация простой дуги без замков
+    generateSimpleArc(cx, cy, radius, startAngle, endAngle) {
+        const points = [];
+        const steps = 8;
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = startAngle + (endAngle - startAngle) * t;
+            points.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+        return points;
     }
 
     // ==================== RECTANGULAR PUZZLE ====================
