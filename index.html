@@ -670,7 +670,7 @@ class PuzzleGenerator {
         }
 
         // Генерируем радиальные рёбра для каждого кольца (с замками)
-        this.circularEdges = { radial: [] };
+        this.circularEdges = { radial: [], arcs: [] };
 
         for (let r = 0; r < numRings; r++) {
             const ring = this.ringConfig[r];
@@ -695,6 +695,31 @@ class PuzzleGenerator {
                     innerPt,
                     outerPt
                 };
+            }
+        }
+
+        // Предварительно генерируем границы дуг для центральной детали и каждого кольца
+        // Это обеспечивает идеальное совпадение между смежными кусочками
+        this.arcBoundaries = { center: [], rings: [] };
+
+        // Границы центральной детали (с замками наружу)
+        const firstRing = this.ringConfig[0];
+        for (let s = 0; s < firstRing.sectors; s++) {
+            const angle1 = (s / firstRing.sectors) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
+            const angle2 = ((s + 1) / firstRing.sectors) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
+            this.arcBoundaries.center[s] = this.generateArcWithTab(cx, cy, this.centerRadius, angle1, angle2, 1);
+        }
+
+        // Границы внешних дуг каждого кольца
+        for (let r = 0; r < numRings; r++) {
+            const ring = this.ringConfig[r];
+            this.arcBoundaries.rings[r] = [];
+            const tabDir = (r === numRings - 1) ? 0 : 1; // Наружу, кроме последнего кольца
+
+            for (let s = 0; s < ring.sectors; s++) {
+                const angle1 = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+                const angle2 = ((s + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+                this.arcBoundaries.rings[r][s] = this.generateArcWithTab(cx, cy, ring.outerRadius, angle1, angle2, tabDir);
             }
         }
 
@@ -810,19 +835,13 @@ class PuzzleGenerator {
         const { cx, cy } = this.circleBounds;
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
-        // Центральная деталь имеет замки, соответствующие первому кольцу
-        const firstRing = this.ringConfig[0];
-        const numSegments = firstRing.sectors;
-
+        // Центральная деталь использует предварительно рассчитанные границы
+        const numSegments = this.arcBoundaries.center.length;
         const allPoints = [];
 
-        // Для каждого сектора первого кольца генерируем сегмент края с замком
+        // Используем предварительно рассчитанные границы для каждого сегмента
         for (let s = 0; s < numSegments; s++) {
-            const angle1 = (s / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
-            const angle2 = ((s + 1) / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
-
-            // Замок направлен наружу
-            const segmentPoints = this.generateArcWithTab(cx, cy, this.centerRadius, angle1, angle2, 1);
+            const segmentPoints = this.arcBoundaries.center[s];
 
             if (s === 0) {
                 allPoints.push(...segmentPoints);
@@ -1094,11 +1113,19 @@ class PuzzleGenerator {
         const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
         const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
 
-        // Внутренняя дуга: простая (получает замки от внешней дуги предыдущего кольца/центра)
-        // Внешняя дуга: с замком наружу (кроме последнего кольца)
-        const innerArcPoints = this.generateSimpleArc(cx, cy, ring.innerRadius, angle1, angle2);
-        const outerTabDir = (ringIndex === numRings - 1) ? 0 : 1; // Наружу, кроме внешнего кольца
-        const outerArcPoints = this.generateArcWithTab(cx, cy, ring.outerRadius, angle1, angle2, outerTabDir);
+        // Внутренняя дуга: для первого кольца используем предварительно рассчитанную границу центра
+        // Для остальных - используем предыдущее кольцо или генерируем с табом внутрь
+        let innerArcPoints;
+        if (ringIndex === 0) {
+            // Первое кольцо: внутренняя граница совпадает с границей центра (в обратном порядке)
+            innerArcPoints = [...this.arcBoundaries.center[sectorIndex]].reverse();
+        } else {
+            // Остальные кольца: генерируем с замком внутрь
+            innerArcPoints = this.generateArcWithTab(cx, cy, ring.innerRadius, angle1, angle2, -1);
+        }
+
+        // Внешняя дуга: используем предварительно рассчитанную границу
+        const outerArcPoints = this.arcBoundaries.rings[ringIndex][sectorIndex];
 
         let d = '';
 
