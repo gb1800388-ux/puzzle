@@ -805,37 +805,25 @@ class PuzzleGenerator {
         return result;
     }
 
-    // Построение центральной детали с замками на внешнем крае
+    // Построение центральной детали - простой круг
     buildCenterPiece() {
         const { cx, cy } = this.circleBounds;
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
-        // Центральная деталь имеет замки, соответствующие первому кольцу
-        const firstRing = this.ringConfig[0];
-        const numSegments = firstRing.sectors;
-
-        const allPoints = [];
-
-        // Для каждого сектора первого кольца генерируем соответствующий сегмент края центральной детали
-        for (let s = 0; s < numSegments; s++) {
-            const angle1 = (s / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
-            const angle2 = ((s + 1) / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
-
-            // Замок направлен наружу (положительное направление)
-            // Это соответствует innerTabDir первого кольца = -1, так что центр имеет +1
-            const segmentPoints = this.generateArcWithTab(cx, cy, this.centerRadius, angle1, angle2, 1);
-
-            // Добавляем точки (без дублирования первой точки для последующих сегментов)
-            if (s === 0) {
-                allPoints.push(...segmentPoints);
-            } else {
-                allPoints.push(...segmentPoints.slice(1));
-            }
+        // Генерируем окружность как набор точек
+        const points = [];
+        const steps = 36;
+        for (let i = 0; i <= steps; i++) {
+            const angle = (i / steps) * Math.PI * 2 - Math.PI / 2;
+            points.push({
+                x: cx + Math.cos(angle) * this.centerRadius,
+                y: cy + Math.sin(angle) * this.centerRadius
+            });
         }
 
-        let d = `M ${fmt(allPoints[0])}`;
-        for (let i = 1; i < allPoints.length; i++) {
-            d += ` L ${fmt(allPoints[i])}`;
+        let d = `M ${fmt(points[0])}`;
+        for (let i = 1; i < points.length; i++) {
+            d += ` L ${fmt(points[i])}`;
         }
         d += ' Z';
 
@@ -1096,15 +1084,9 @@ class PuzzleGenerator {
         const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
         const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
 
-        // Дуги с замками
-        // Направление замка определяется индексом кольца для согласованности между соседними деталями
-        // Внутренняя дуга: замок направлен внутрь (к центру) для чётных колец
-        const innerTabDir = (ringIndex % 2 === 0) ? -1 : 1;
-        // Внешняя дуга: замок направлен наружу для последнего кольца (нет замка), иначе противоположно внутренней
-        const outerTabDir = (ringIndex === numRings - 1) ? 0 : -innerTabDir;
-
-        const innerArcPoints = this.generateArcWithTab(cx, cy, ring.innerRadius, angle1, angle2, innerTabDir);
-        const outerArcPoints = this.generateArcWithTab(cx, cy, ring.outerRadius, angle1, angle2, outerTabDir);
+        // Простые дуги без замков (стабильный вариант)
+        const innerArcPoints = this.generateSimpleArc(cx, cy, ring.innerRadius, angle1, angle2);
+        const outerArcPoints = this.generateSimpleArc(cx, cy, ring.outerRadius, angle1, angle2);
 
         let d = '';
 
