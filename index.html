@@ -1149,11 +1149,11 @@ class PuzzleGenerator {
         return { path: d, center, ring: ringIndex, sector: sectorIndex };
     }
 
-    // Генерация дуги с классическим пазловым замком (единая плавная форма)
+    // Генерация дуги с плавным замком (простая волна/бугорок)
     generateArcWithTab(cx, cy, radius, startAngle, endAngle, tabDir) {
         const arcLength = Math.abs(endAngle - startAngle) * radius;
 
-        // Если замок не нужен (tabDir === 0) или дуга слишком короткая
+        // Если замок не нужен или дуга слишком короткая
         if (tabDir === 0 || arcLength < 20) {
             return this.generateSimpleArc(cx, cy, radius, startAngle, endAngle);
         }
@@ -1162,95 +1162,35 @@ class PuzzleGenerator {
         const midAngle = (startAngle + endAngle) / 2;
         const angleSpan = endAngle - startAngle;
 
-        // Параметры замка (шире головка, уже шейка, ниже высота)
-        const tabHeight = Math.min(arcLength * 0.18, radius * 0.08) * tabDir;
-        const neckHalfWidth = angleSpan * 0.035;
-        const headHalfWidth = angleSpan * 0.13;
+        // Параметры замка - простой плавный бугорок
+        const tabHeight = Math.min(arcLength * 0.20, radius * 0.10) * tabDir;
+        const tabWidth = angleSpan * 0.35; // Ширина бугорка
 
-        // Функция для создания точки в полярных координатах
-        const polarPoint = (angle, r) => ({
-            x: cx + Math.cos(angle) * r,
-            y: cy + Math.sin(angle) * r
-        });
+        // Количество точек
+        const totalSteps = 32;
 
-        // Кубический безье в полярных координатах
-        const bezierPolar = (a0, r0, a1, r1, a2, r2, a3, r3, t) => {
-            const it = 1 - t;
-            const angle = it*it*it*a0 + 3*it*it*t*a1 + 3*it*t*t*a2 + t*t*t*a3;
-            const r = it*it*it*r0 + 3*it*it*t*r1 + 3*it*t*t*r2 + t*t*t*r3;
-            return polarPoint(angle, r);
-        };
+        for (let i = 0; i <= totalSteps; i++) {
+            const t = i / totalSteps;
+            const angle = startAngle + angleSpan * t;
 
-        // Ключевые углы
-        const neckStartAngle = midAngle - neckHalfWidth;
-        const neckEndAngle = midAngle + neckHalfWidth;
-        const headStartAngle = midAngle - headHalfWidth;
-        const headEndAngle = midAngle + headHalfWidth;
+            // Расстояние от центра бугорка (0 в центре, 1 на краях)
+            const distFromCenter = Math.abs(angle - midAngle) / (tabWidth / 2);
 
-        // Первая часть дуги (до начала замка)
-        const preTabAngle = midAngle - headHalfWidth * 1.3;
-        const arcSteps = 6;
-        for (let i = 0; i <= arcSteps; i++) {
-            const t = i / arcSteps;
-            const angle = startAngle + (preTabAngle - startAngle) * t;
-            points.push(polarPoint(angle, radius));
-        }
+            // Плавная функция бугорка (похожа на гауссиану)
+            let bump = 0;
+            if (distFromCenter < 1) {
+                // Плавный переход с помощью косинуса
+                bump = (1 + Math.cos(distFromCenter * Math.PI)) / 2;
+                // Добавляем "шейку" - сужение у основания
+                const neckFactor = Math.pow(bump, 0.7);
+                bump = neckFactor;
+            }
 
-        // Левый изгиб: от дуги к шейке (безье)
-        const curveSteps = 8;
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            points.push(bezierPolar(
-                preTabAngle, radius,
-                neckStartAngle - neckHalfWidth * 0.3, radius,
-                neckStartAngle, radius + tabHeight * 0.3,
-                neckStartAngle, radius + tabHeight * 0.5,
-                t
-            ));
-        }
-
-        // Левая часть головки: от шейки к вершине (безье) - более округлая
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            points.push(bezierPolar(
-                neckStartAngle, radius + tabHeight * 0.5,
-                neckStartAngle, radius + tabHeight * 0.9,
-                headStartAngle, radius + tabHeight * 1.05,
-                midAngle, radius + tabHeight * 1.05,
-                t
-            ));
-        }
-
-        // Правая часть головки: от вершины к шейке (безье) - более округлая
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            points.push(bezierPolar(
-                midAngle, radius + tabHeight * 1.05,
-                headEndAngle, radius + tabHeight * 1.05,
-                neckEndAngle, radius + tabHeight * 0.9,
-                neckEndAngle, radius + tabHeight * 0.5,
-                t
-            ));
-        }
-
-        // Правый изгиб: от шейки обратно к дуге (безье)
-        const postTabAngle = midAngle + headHalfWidth * 1.3;
-        for (let i = 1; i <= curveSteps; i++) {
-            const t = i / curveSteps;
-            points.push(bezierPolar(
-                neckEndAngle, radius + tabHeight * 0.5,
-                neckEndAngle, radius + tabHeight * 0.3,
-                neckEndAngle + neckHalfWidth * 0.3, radius,
-                postTabAngle, radius,
-                t
-            ));
-        }
-
-        // Последняя часть дуги (после замка)
-        for (let i = 1; i <= arcSteps; i++) {
-            const t = i / arcSteps;
-            const angle = postTabAngle + (endAngle - postTabAngle) * t;
-            points.push(polarPoint(angle, radius));
+            const r = radius + tabHeight * bump;
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
         }
 
         return points;
