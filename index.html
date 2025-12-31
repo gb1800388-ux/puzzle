@@ -805,25 +805,35 @@ class PuzzleGenerator {
         return result;
     }
 
-    // Построение центральной детали - простой круг
+    // Построение центральной детали с замками на внешнем крае
     buildCenterPiece() {
         const { cx, cy } = this.circleBounds;
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
-        // Генерируем окружность как набор точек
-        const points = [];
-        const steps = 36;
-        for (let i = 0; i <= steps; i++) {
-            const angle = (i / steps) * Math.PI * 2 - Math.PI / 2;
-            points.push({
-                x: cx + Math.cos(angle) * this.centerRadius,
-                y: cy + Math.sin(angle) * this.centerRadius
-            });
+        // Центральная деталь имеет замки, соответствующие первому кольцу
+        const firstRing = this.ringConfig[0];
+        const numSegments = firstRing.sectors;
+
+        const allPoints = [];
+
+        // Для каждого сектора первого кольца генерируем сегмент края с замком
+        for (let s = 0; s < numSegments; s++) {
+            const angle1 = (s / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
+            const angle2 = ((s + 1) / numSegments) * Math.PI * 2 + firstRing.offset - Math.PI / 2;
+
+            // Замок направлен наружу
+            const segmentPoints = this.generateArcWithTab(cx, cy, this.centerRadius, angle1, angle2, 1);
+
+            if (s === 0) {
+                allPoints.push(...segmentPoints);
+            } else {
+                allPoints.push(...segmentPoints.slice(1));
+            }
         }
 
-        let d = `M ${fmt(points[0])}`;
-        for (let i = 1; i < points.length; i++) {
-            d += ` L ${fmt(points[i])}`;
+        let d = `M ${fmt(allPoints[0])}`;
+        for (let i = 1; i < allPoints.length; i++) {
+            d += ` L ${fmt(allPoints[i])}`;
         }
         d += ' Z';
 
@@ -1084,9 +1094,11 @@ class PuzzleGenerator {
         const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
         const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
 
-        // Простые дуги без замков (стабильный вариант)
+        // Внутренняя дуга: простая (получает замки от внешней дуги предыдущего кольца/центра)
+        // Внешняя дуга: с замком наружу (кроме последнего кольца)
         const innerArcPoints = this.generateSimpleArc(cx, cy, ring.innerRadius, angle1, angle2);
-        const outerArcPoints = this.generateSimpleArc(cx, cy, ring.outerRadius, angle1, angle2);
+        const outerTabDir = (ringIndex === numRings - 1) ? 0 : 1; // Наружу, кроме внешнего кольца
+        const outerArcPoints = this.generateArcWithTab(cx, cy, ring.outerRadius, angle1, angle2, outerTabDir);
 
         let d = '';
 
