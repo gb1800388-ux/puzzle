@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puzzle Generator Pro - Circular Fix</title>
+<title>Puzzle Generator Pro - Advanced Circular</title>
 <style>
     :root {
         --primary: #2563eb;
@@ -224,7 +224,7 @@
         Puzzle Generator Pro
     </div>
     <div style="font-size: 0.8rem; color: var(--text-sec);">
-        Circular Puzzle Fixed
+        Advanced Circular Puzzle
     </div>
 </header>
 
@@ -291,8 +291,8 @@
             <div class="label">4. Количество деталей</div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:0.75rem; color:#64748b; min-width:38px;">Легко</span>
-                <input type="range" id="difficulty" min="1" max="10" value="4" style="flex:1;">
-                <span id="piecesCount" style="font-weight:700; color:var(--primary); min-width:55px; font-size:0.9rem;">48 шт</span>
+                <input type="range" id="difficulty" min="1" max="10" value="5" style="flex:1;">
+                <span id="piecesCount" style="font-weight:700; color:var(--primary); min-width:55px; font-size:0.9rem;">~70 шт</span>
                 <span style="font-size:0.75rem; color:#64748b; min-width:38px;">Сложно</span>
             </div>
         </div>
@@ -377,12 +377,12 @@
 
 <script>
 /**
- * PUZZLE GENERATOR PRO - CIRCULAR PUZZLE FIX
+ * PUZZLE GENERATOR PRO - ADVANCED CIRCULAR PUZZLE
  *
- * Ключевые исправления:
- * 1. Упрощённая полярная сетка - одинаковое кол-во секторов во всех кольцах
- * 2. Рёбра генерируются ОДИН РАЗ и переиспользуются
- * 3. Правильное построение путей для круговых деталей
+ * Как на изображении:
+ * - Разное количество секторов в каждом кольце (больше к краю)
+ * - Сдвиг секторов между кольцами (шахматный порядок)
+ * - Замки на всех внутренних рёбрах
  */
 
 const CONFIG = {
@@ -392,7 +392,8 @@ const CONFIG = {
         a4: { w: 297, h: 210 },
         a3: { w: 420, h: 297 }
     },
-    PIECES_MAP: [12, 24, 36, 48, 72, 96, 120, 150, 200, 300]
+    // Примерное количество деталей для каждого уровня сложности
+    PIECES_MAP: [20, 35, 50, 70, 100, 130, 170, 220, 280, 350]
 };
 
 class SeededRandom {
@@ -420,7 +421,7 @@ class PuzzleGenerator {
             image: null,
             paper: 'a4',
             type: 'classic',
-            difficulty: 4,
+            difficulty: 5,
             bleed: 5,
             strokeWidth: 0.5,
             showBorders: true,
@@ -428,10 +429,12 @@ class PuzzleGenerator {
         };
 
         this.pieces = [];
-        this.edges = { h: [], v: [], radial: [], arc: [] };
+        this.edges = { h: [], v: [] };
+        this.circularEdges = { radial: [], arc: [] };
         this.imgBounds = { x: 0, y: 0, w: 0, h: 0 };
         this.grid = { rows: 0, cols: 0 };
         this.circleBounds = null;
+        this.ringConfig = [];
 
         this.initCanvas();
         this.initListeners();
@@ -486,7 +489,7 @@ class PuzzleGenerator {
         const diffSlider = document.getElementById('difficulty');
         diffSlider.addEventListener('input', (e) => {
             this.state.difficulty = parseInt(e.target.value);
-            document.getElementById('piecesCount').textContent = `${CONFIG.PIECES_MAP[this.state.difficulty-1]} шт`;
+            document.getElementById('piecesCount').textContent = `~${CONFIG.PIECES_MAP[this.state.difficulty-1]} шт`;
         });
         diffSlider.addEventListener('change', () => {
             if(this.state.image) this.generate();
@@ -543,8 +546,10 @@ class PuzzleGenerator {
     clear() {
         this.state.image = null;
         this.pieces = [];
-        this.edges = { h: [], v: [], radial: [], arc: [] };
+        this.edges = { h: [], v: [] };
+        this.circularEdges = { radial: [], arc: [] };
         this.circleBounds = null;
+        this.ringConfig = [];
         document.getElementById('imagePreview').style.display = 'none';
         document.getElementById('imagePreview').src = '';
         document.getElementById('uploadPlaceholder').style.display = 'block';
@@ -589,7 +594,6 @@ class PuzzleGenerator {
                 cy: this.canvas.height / 2,
                 radius: minDim / 2 - 5
             };
-            // Image bounds for circular - square containing the circle
             this.imgBounds.w = this.circleBounds.radius * 2;
             this.imgBounds.h = this.circleBounds.radius * 2;
             this.imgBounds.x = this.circleBounds.cx - this.circleBounds.radius;
@@ -609,95 +613,117 @@ class PuzzleGenerator {
         }
     }
 
-    // ========== CIRCULAR PUZZLE ==========
+    // ==================== CIRCULAR PUZZLE ====================
 
     generateCircularPuzzle() {
         const targetPieces = CONFIG.PIECES_MAP[this.state.difficulty - 1];
         const { cx, cy, radius } = this.circleBounds;
 
-        // Calculate rings and sectors
-        // For simplicity: all rings have the same number of sectors
-        // numRings * numSectors = targetPieces (approximately)
+        // Определяем количество колец и секторов
+        // Чем больше деталей, тем больше колец
+        let numRings = Math.max(3, Math.min(8, Math.round(Math.sqrt(targetPieces / 8))));
 
-        let numRings = Math.max(2, Math.round(Math.sqrt(targetPieces / 6)));
-        let numSectors = Math.round(targetPieces / numRings);
+        // Определяем количество секторов в каждом кольце
+        // Внутренние кольца имеют меньше секторов
+        this.ringConfig = [];
+        let totalPieces = 0;
 
-        // Ensure minimum values
-        if (numRings < 2) numRings = 2;
-        if (numSectors < 4) numSectors = 4;
-        if (numRings > 8) numRings = 8;
-        if (numSectors > 24) numSectors = 24;
+        // Базовое количество секторов для первого кольца
+        let baseSectors = Math.max(6, Math.round(targetPieces / numRings / 2));
 
-        this.grid = { rings: numRings, sectors: numSectors };
-
-        // Generate polar mesh points
-        // mesh[ring][sector] = point at that intersection
-        const mesh = [];
-        for (let r = 0; r <= numRings; r++) {
-            mesh[r] = [];
-            const ringRadius = (r / numRings) * radius;
-            for (let s = 0; s <= numSectors; s++) {
-                const angle = (s / numSectors) * Math.PI * 2 - Math.PI / 2;
-                mesh[r][s] = {
-                    x: cx + Math.cos(angle) * ringRadius,
-                    y: cy + Math.sin(angle) * ringRadius,
-                    angle: angle,
-                    radius: ringRadius
-                };
-            }
-        }
-        this.polarMesh = mesh;
-
-        // Generate edges
-        this.edges = { radial: [], arc: [] };
-
-        // Radial edges: from ring r to ring r+1 at each sector boundary
-        // radial[r][s] = edge from mesh[r][s] to mesh[r+1][s]
         for (let r = 0; r < numRings; r++) {
-            this.edges.radial[r] = [];
-            for (let s = 0; s <= numSectors; s++) {
-                const p1 = mesh[r][s];
-                const p2 = mesh[r + 1][s];
-
-                // Inner boundary (r=0) and sector boundaries at s=0 and s=numSectors are straight
-                // But s=0 and s=numSectors are the same sector (wrap around), so we only draw once
-                const isBorder = (s === 0 || s === numSectors); // These edges overlap, draw only one
-
-                if (s < numSectors) { // Don't duplicate the last edge
-                    const tab = (r === 0) ? null : this.generateTabParams(); // No tabs from center
-                    this.edges.radial[r][s] = {
-                        points: this.generateRadialEdgePoints(p1, p2, tab),
-                        tab: tab
-                    };
-                }
+            // Количество секторов растёт с каждым кольцом
+            // Коэффициент роста зависит от номера кольца
+            let sectors;
+            if (r === 0) {
+                sectors = Math.max(6, Math.round(baseSectors * 0.6));
+            } else {
+                // Каждое следующее кольцо имеет примерно на 20-40% больше секторов
+                const prevSectors = this.ringConfig[r - 1].sectors;
+                const growthFactor = 1 + (0.2 + this.rng.nextFloat(0, 0.2));
+                sectors = Math.round(prevSectors * growthFactor);
             }
+
+            // Ограничиваем максимум
+            sectors = Math.min(sectors, 30);
+
+            // Сдвиг для шахматного порядка (в радианах)
+            const offset = (r % 2 === 1) ? (Math.PI / sectors) : 0;
+
+            this.ringConfig.push({
+                sectors: sectors,
+                offset: offset,
+                innerRadius: (r / numRings) * radius,
+                outerRadius: ((r + 1) / numRings) * radius
+            });
+
+            totalPieces += sectors;
         }
 
-        // Arc edges: along each ring between sectors
-        // arc[r][s] = edge along ring r from sector s to sector s+1
-        for (let r = 1; r <= numRings; r++) {
-            this.edges.arc[r] = [];
-            for (let s = 0; s < numSectors; s++) {
-                const p1 = mesh[r][s];
-                const p2 = mesh[r][s + 1];
+        // Генерируем рёбра для каждого кольца
+        this.circularEdges = { radial: [], arc: [] };
 
-                // Outer boundary (r = numRings) has no tabs
-                const isOuter = (r === numRings);
-                const tab = isOuter ? null : this.generateTabParams();
+        for (let r = 0; r < numRings; r++) {
+            const ring = this.ringConfig[r];
+            this.circularEdges.radial[r] = [];
+            this.circularEdges.arc[r] = [];
 
-                this.edges.arc[r][s] = {
-                    points: this.generateArcEdgePoints(p1, p2, r, numRings, tab),
-                    tab: tab,
-                    isOuter: isOuter
+            // Радиальные рёбра (от внутреннего радиуса к внешнему)
+            for (let s = 0; s < ring.sectors; s++) {
+                const angle = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+
+                const innerPt = {
+                    x: cx + Math.cos(angle) * ring.innerRadius,
+                    y: cy + Math.sin(angle) * ring.innerRadius
+                };
+                const outerPt = {
+                    x: cx + Math.cos(angle) * ring.outerRadius,
+                    y: cy + Math.sin(angle) * ring.outerRadius
+                };
+
+                // Первое кольцо не имеет замков на радиальных рёбрах от центра
+                const tab = (r === 0) ? null : this.generateTabParams();
+
+                this.circularEdges.radial[r][s] = {
+                    points: this.generateEdgePoints(innerPt, outerPt, tab),
+                    innerPt,
+                    outerPt
+                };
+            }
+
+            // Дуговые рёбра (вдоль кольца между секторами)
+            for (let s = 0; s < ring.sectors; s++) {
+                const angle1 = (s / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+                const angle2 = ((s + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+
+                // Внешняя дуга этого кольца
+                const outerPt1 = {
+                    x: cx + Math.cos(angle1) * ring.outerRadius,
+                    y: cy + Math.sin(angle1) * ring.outerRadius
+                };
+                const outerPt2 = {
+                    x: cx + Math.cos(angle2) * ring.outerRadius,
+                    y: cy + Math.sin(angle2) * ring.outerRadius
+                };
+
+                // На внешнем кольце (последнем) нет замков
+                const isOuterRing = (r === numRings - 1);
+                const tab = isOuterRing ? null : this.generateTabParams();
+
+                this.circularEdges.arc[r][s] = {
+                    points: this.generateArcPoints(cx, cy, ring.outerRadius, angle1, angle2, tab),
+                    angle1,
+                    angle2
                 };
             }
         }
 
-        // Create piece paths
+        // Создаём детали
         this.pieces = [];
         for (let r = 0; r < numRings; r++) {
-            for (let s = 0; s < numSectors; s++) {
-                const piece = this.buildCircularPiecePath(r, s, numRings, numSectors, mesh);
+            const ring = this.ringConfig[r];
+            for (let s = 0; s < ring.sectors; s++) {
+                const piece = this.buildCircularPiece(r, s, numRings);
                 this.pieces.push(piece);
             }
         }
@@ -708,12 +734,12 @@ class PuzzleGenerator {
         return {
             dir: this.rng.next() > 0.5 ? 1 : -1,
             neckWidth: this.rng.nextFloat(0.08, 0.12),
-            headWidth: this.rng.nextFloat(0.14, 0.18),
-            height: this.rng.nextFloat(0.16, 0.22)
+            headWidth: this.rng.nextFloat(0.14, 0.20),
+            height: this.rng.nextFloat(0.18, 0.25)
         };
     }
 
-    generateRadialEdgePoints(p1, p2, tab) {
+    generateEdgePoints(p1, p2, tab) {
         if (!tab) {
             return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
         }
@@ -722,27 +748,145 @@ class PuzzleGenerator {
         const dy = p2.y - p1.y;
         const len = Math.sqrt(dx * dx + dy * dy);
 
-        if (len < 20) {
+        if (len < 15) {
             return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
         }
 
         return this.generateTabPoints(p1, p2, tab);
     }
 
-    generateArcEdgePoints(p1, p2, ring, totalRings, tab) {
+    generateArcPoints(cx, cy, radius, angle1, angle2, tab) {
+        // Создаём точки вдоль дуги
+        const steps = 12;
+        const arcPoints = [];
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = angle1 + (angle2 - angle1) * t;
+            arcPoints.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius
+            });
+        }
+
         if (!tab) {
-            return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
+            return arcPoints;
         }
 
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
+        // Вставляем замок в середину дуги
+        const midIndex = Math.floor(steps / 2);
+        const p1 = arcPoints[midIndex - 1];
+        const p2 = arcPoints[midIndex + 1];
 
-        if (len < 20) {
-            return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
+        // Генерируем замок между p1 и p2
+        const tabPoints = this.generateTabPointsForArc(cx, cy, radius, angle1, angle2, tab);
+
+        // Заменяем среднюю часть дуги на замок
+        const result = [];
+        for (let i = 0; i < midIndex - 1; i++) {
+            result.push(arcPoints[i]);
+        }
+        result.push(...tabPoints);
+        for (let i = midIndex + 2; i <= steps; i++) {
+            result.push(arcPoints[i]);
         }
 
-        return this.generateTabPoints(p1, p2, tab);
+        return result;
+    }
+
+    generateTabPointsForArc(cx, cy, radius, angle1, angle2, tab) {
+        // Генерируем замок на дуге
+        const midAngle = (angle1 + angle2) / 2;
+        const arcLen = Math.abs(angle2 - angle1) * radius;
+
+        // Точка в центре замка
+        const midPt = {
+            x: cx + Math.cos(midAngle) * radius,
+            y: cy + Math.sin(midAngle) * radius
+        };
+
+        // Направление наружу (перпендикуляр к дуге)
+        const outX = Math.cos(midAngle);
+        const outY = Math.sin(midAngle);
+
+        // Направление вдоль дуги
+        const tangentX = -Math.sin(midAngle);
+        const tangentY = Math.cos(midAngle);
+
+        const dir = tab.dir;
+        const tabHeight = arcLen * tab.height;
+        const neckW = arcLen * tab.neckWidth;
+        const headW = arcLen * tab.headWidth;
+
+        const points = [];
+        const steps = 8;
+
+        // Точки начала замка
+        const startAngle = midAngle - (neckW / radius);
+        const endAngle = midAngle + (neckW / radius);
+
+        // Левая часть до замка
+        points.push({
+            x: cx + Math.cos(startAngle) * radius,
+            y: cy + Math.sin(startAngle) * radius
+        });
+
+        // Левая сторона шейки
+        const neckStartPt = {
+            x: cx + Math.cos(startAngle) * radius,
+            y: cy + Math.sin(startAngle) * radius
+        };
+
+        // Верх замка (смещён наружу или внутрь)
+        const tabRadius = radius + tabHeight * dir;
+        const headStartAngle = midAngle - (headW / radius);
+        const headEndAngle = midAngle + (headW / radius);
+
+        // Кривая вверх по левой стороне
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = startAngle + (headStartAngle - startAngle) * t;
+            const r = radius + tabHeight * dir * this.smoothStep(t);
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Верхняя дуга замка
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = headStartAngle + (headEndAngle - headStartAngle) * t;
+            const bulge = Math.sin(t * Math.PI) * tabHeight * 0.15 * dir;
+            const r = tabRadius + bulge;
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Кривая вниз по правой стороне
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const angle = headEndAngle + (endAngle - headEndAngle) * t;
+            const r = radius + tabHeight * dir * (1 - this.smoothStep(t));
+            points.push({
+                x: cx + Math.cos(angle) * r,
+                y: cy + Math.sin(angle) * r
+            });
+        }
+
+        // Правая часть после замка
+        points.push({
+            x: cx + Math.cos(endAngle) * radius,
+            y: cy + Math.sin(endAngle) * radius
+        });
+
+        return points;
+    }
+
+    smoothStep(t) {
+        return t * t * (3 - 2 * t);
     }
 
     generateTabPoints(p1, p2, tab) {
@@ -777,7 +921,6 @@ class PuzzleGenerator {
         points.push(P(0, 0));
         points.push(P(nL, 0));
 
-        // Left side curve up
         const steps = 8;
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
@@ -790,19 +933,17 @@ class PuzzleGenerator {
             ));
         }
 
-        // Top curve
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
             points.push(this.cubicBezier(
                 P(hL, tabH),
-                P(hL, tabH + 0.05),
-                P(hR, tabH + 0.05),
+                P(hL, tabH + 0.06),
+                P(hR, tabH + 0.06),
                 P(hR, tabH),
                 t
             ));
         }
 
-        // Right side curve down
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
             points.push(this.cubicBezier(
@@ -815,7 +956,6 @@ class PuzzleGenerator {
         }
 
         points.push(P(1, 0));
-
         return points;
     }
 
@@ -827,30 +967,54 @@ class PuzzleGenerator {
         };
     }
 
-    buildCircularPiecePath(ring, sector, numRings, numSectors, mesh) {
+    buildCircularPiece(ringIndex, sectorIndex, numRings) {
+        const { cx, cy, radius } = this.circleBounds;
+        const ring = this.ringConfig[ringIndex];
         const fmt = (p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 
-        // Get corner points
-        const innerLeft = mesh[ring][sector];
-        const innerRight = mesh[ring][sector + 1];
-        const outerRight = mesh[ring + 1][sector + 1];
-        const outerLeft = mesh[ring + 1][sector];
+        const angle1 = (sectorIndex / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
+        const angle2 = ((sectorIndex + 1) / ring.sectors) * Math.PI * 2 + ring.offset - Math.PI / 2;
 
-        // Get edges
-        const innerArc = (ring === 0) ? null : this.edges.arc[ring][sector];
-        const outerArc = this.edges.arc[ring + 1][sector];
-        const leftRadial = this.edges.radial[ring][sector];
-        const rightRadial = this.edges.radial[ring][sector + 1] || this.edges.radial[ring][0]; // wrap
+        // Четыре угла детали
+        const innerLeft = {
+            x: cx + Math.cos(angle1) * ring.innerRadius,
+            y: cy + Math.sin(angle1) * ring.innerRadius
+        };
+        const innerRight = {
+            x: cx + Math.cos(angle2) * ring.innerRadius,
+            y: cy + Math.sin(angle2) * ring.innerRadius
+        };
+        const outerLeft = {
+            x: cx + Math.cos(angle1) * ring.outerRadius,
+            y: cy + Math.sin(angle1) * ring.outerRadius
+        };
+        const outerRight = {
+            x: cx + Math.cos(angle2) * ring.outerRadius,
+            y: cy + Math.sin(angle2) * ring.outerRadius
+        };
+
+        // Рёбра
+        const leftRadial = this.circularEdges.radial[ringIndex][sectorIndex];
+        const rightRadial = this.circularEdges.radial[ringIndex][(sectorIndex + 1) % ring.sectors];
+        const outerArc = this.circularEdges.arc[ringIndex][sectorIndex];
+
+        // Внутренняя дуга - если это не центральное кольцо
+        let innerArcPoints = null;
+        if (ringIndex > 0) {
+            // Генерируем внутреннюю дугу с замком
+            const prevRing = this.ringConfig[ringIndex - 1];
+            const tab = this.generateTabParams();
+            innerArcPoints = this.generateArcPoints(cx, cy, ring.innerRadius, angle1, angle2, tab);
+        }
 
         let d = '';
 
-        if (ring === 0) {
-            // Center piece - starts from center point
-            const { cx, cy } = this.circleBounds;
+        if (ringIndex === 0) {
+            // Центральное кольцо - начинаем от центра
             d = `M ${cx.toFixed(2)} ${cy.toFixed(2)}`;
 
-            // Radial edge to outer (left side)
-            if (leftRadial && leftRadial.points.length > 1) {
+            // Левое радиальное ребро (от центра наружу)
+            if (leftRadial.points.length > 1) {
                 for (let i = 1; i < leftRadial.points.length; i++) {
                     d += ` L ${fmt(leftRadial.points[i])}`;
                 }
@@ -858,8 +1022,8 @@ class PuzzleGenerator {
                 d += ` L ${fmt(outerLeft)}`;
             }
 
-            // Arc along outer ring
-            if (outerArc && outerArc.points.length > 1) {
+            // Внешняя дуга
+            if (outerArc.points.length > 1) {
                 for (let i = 1; i < outerArc.points.length; i++) {
                     d += ` L ${fmt(outerArc.points[i])}`;
                 }
@@ -867,8 +1031,8 @@ class PuzzleGenerator {
                 d += ` L ${fmt(outerRight)}`;
             }
 
-            // Radial edge back to center (right side, reversed)
-            if (rightRadial && rightRadial.points.length > 1) {
+            // Правое радиальное ребро (обратно к центру)
+            if (rightRadial.points.length > 1) {
                 for (let i = rightRadial.points.length - 2; i >= 0; i--) {
                     d += ` L ${fmt(rightRadial.points[i])}`;
                 }
@@ -876,40 +1040,40 @@ class PuzzleGenerator {
                 d += ` L ${cx.toFixed(2)} ${cy.toFixed(2)}`;
             }
         } else {
-            // Regular ring piece
+            // Обычное кольцо
             d = `M ${fmt(innerLeft)}`;
 
-            // Inner arc (reversed direction since we go counterclockwise on inner)
-            if (innerArc && innerArc.points.length > 1) {
-                for (let i = 1; i < innerArc.points.length; i++) {
-                    d += ` L ${fmt(innerArc.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(innerRight)}`;
-            }
-
-            // Right radial edge (going outward)
-            if (rightRadial && rightRadial.points.length > 1) {
-                for (let i = 1; i < rightRadial.points.length; i++) {
-                    d += ` L ${fmt(rightRadial.points[i])}`;
-                }
-            } else {
-                d += ` L ${fmt(outerRight)}`;
-            }
-
-            // Outer arc (reversed)
-            if (outerArc && outerArc.points.length > 1) {
-                for (let i = outerArc.points.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(outerArc.points[i])}`;
+            // Левое радиальное ребро (от внутреннего к внешнему)
+            if (leftRadial.points.length > 1) {
+                for (let i = 1; i < leftRadial.points.length; i++) {
+                    d += ` L ${fmt(leftRadial.points[i])}`;
                 }
             } else {
                 d += ` L ${fmt(outerLeft)}`;
             }
 
-            // Left radial edge (going inward, reversed)
-            if (leftRadial && leftRadial.points.length > 1) {
-                for (let i = leftRadial.points.length - 2; i >= 0; i--) {
-                    d += ` L ${fmt(leftRadial.points[i])}`;
+            // Внешняя дуга
+            if (outerArc.points.length > 1) {
+                for (let i = 1; i < outerArc.points.length; i++) {
+                    d += ` L ${fmt(outerArc.points[i])}`;
+                }
+            } else {
+                d += ` L ${fmt(outerRight)}`;
+            }
+
+            // Правое радиальное ребро (от внешнего к внутреннему)
+            if (rightRadial.points.length > 1) {
+                for (let i = rightRadial.points.length - 2; i >= 0; i--) {
+                    d += ` L ${fmt(rightRadial.points[i])}`;
+                }
+            } else {
+                d += ` L ${fmt(innerRight)}`;
+            }
+
+            // Внутренняя дуга (в обратном направлении)
+            if (innerArcPoints && innerArcPoints.length > 1) {
+                for (let i = innerArcPoints.length - 2; i >= 0; i--) {
+                    d += ` L ${fmt(innerArcPoints[i])}`;
                 }
             } else {
                 d += ` L ${fmt(innerLeft)}`;
@@ -918,18 +1082,18 @@ class PuzzleGenerator {
 
         d += ' Z';
 
-        // Calculate center for numbering
-        const midAngle = ((sector + 0.5) / numSectors) * Math.PI * 2 - Math.PI / 2;
-        const midRadius = ((ring + 0.5) / numRings) * this.circleBounds.radius;
+        // Центр детали для нумерации
+        const midAngle = (angle1 + angle2) / 2;
+        const midRadius = (ring.innerRadius + ring.outerRadius) / 2;
         const center = {
-            x: this.circleBounds.cx + Math.cos(midAngle) * midRadius,
-            y: this.circleBounds.cy + Math.sin(midAngle) * midRadius
+            x: cx + Math.cos(midAngle) * midRadius,
+            y: cy + Math.sin(midAngle) * midRadius
         };
 
-        return { path: d, center, ring, sector };
+        return { path: d, center, ring: ringIndex, sector: sectorIndex };
     }
 
-    // ========== RECTANGULAR PUZZLE ==========
+    // ==================== RECTANGULAR PUZZLE ====================
 
     generateRectangularPuzzle() {
         const targetPieces = CONFIG.PIECES_MAP[this.state.difficulty - 1];
@@ -946,7 +1110,6 @@ class PuzzleGenerator {
 
         this.grid = { rows, cols };
 
-        // Create mesh with jitter
         const pW = w / cols;
         const pH = h / rows;
         const mesh = [];
@@ -957,7 +1120,6 @@ class PuzzleGenerator {
                 let px = x + c * pW;
                 let py = y + r * pH;
 
-                // Add jitter to internal points
                 if (r > 0 && r < rows && c > 0 && c < cols) {
                     px += this.rng.nextFloat(-pW * 0.12, pW * 0.12);
                     py += this.rng.nextFloat(-pH * 0.12, pH * 0.12);
@@ -968,10 +1130,8 @@ class PuzzleGenerator {
         }
         this.rectMesh = mesh;
 
-        // Generate edges
         this.edges = { h: [], v: [] };
 
-        // Horizontal edges
         for (let r = 0; r <= rows; r++) {
             this.edges.h[r] = [];
             for (let c = 0; c < cols; c++) {
@@ -987,7 +1147,6 @@ class PuzzleGenerator {
             }
         }
 
-        // Vertical edges
         for (let r = 0; r < rows; r++) {
             this.edges.v[r] = [];
             for (let c = 0; c <= cols; c++) {
@@ -1003,7 +1162,6 @@ class PuzzleGenerator {
             }
         }
 
-        // Create pieces
         this.pieces = [];
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -1011,13 +1169,6 @@ class PuzzleGenerator {
                 this.pieces.push(piece);
             }
         }
-    }
-
-    generateEdgePoints(p1, p2, tab) {
-        if (!tab) {
-            return [{ x: p1.x, y: p1.y }, { x: p2.x, y: p2.y }];
-        }
-        return this.generateTabPoints(p1, p2, tab);
     }
 
     buildRectPiecePath(row, col, rows, cols, mesh) {
@@ -1032,28 +1183,24 @@ class PuzzleGenerator {
 
         let d = `M ${fmt(p1)}`;
 
-        // Top edge
         if (topEdge.points.length > 1) {
             for (let i = 1; i < topEdge.points.length; i++) {
                 d += ` L ${fmt(topEdge.points[i])}`;
             }
         }
 
-        // Right edge
         if (rightEdge.points.length > 1) {
             for (let i = 1; i < rightEdge.points.length; i++) {
                 d += ` L ${fmt(rightEdge.points[i])}`;
             }
         }
 
-        // Bottom edge (reversed)
         if (bottomEdge.points.length > 1) {
             for (let i = bottomEdge.points.length - 2; i >= 0; i--) {
                 d += ` L ${fmt(bottomEdge.points[i])}`;
             }
         }
 
-        // Left edge (reversed)
         if (leftEdge.points.length > 1) {
             for (let i = leftEdge.points.length - 2; i >= 0; i--) {
                 d += ` L ${fmt(leftEdge.points[i])}`;
@@ -1070,7 +1217,7 @@ class PuzzleGenerator {
         return { path: d, center, row, col };
     }
 
-    // ========== RENDERING ==========
+    // ==================== RENDERING ====================
 
     render() {
         const { width, height } = this.canvas;
@@ -1085,7 +1232,6 @@ class PuzzleGenerator {
 
         const isCircular = this.state.type === 'circular';
 
-        // Draw image with clipping
         this.ctx.save();
         this.ctx.beginPath();
         if (isCircular && this.circleBounds) {
@@ -1097,7 +1243,6 @@ class PuzzleGenerator {
         this.ctx.drawImage(this.state.image, this.imgBounds.x, this.imgBounds.y, this.imgBounds.w, this.imgBounds.h);
         this.ctx.restore();
 
-        // Draw puzzle lines
         if (this.state.showBorders) {
             const strokeWidth = this.state.strokeWidth * CONFIG.MM_TO_PX;
             this.ctx.strokeStyle = '#000';
@@ -1106,7 +1251,6 @@ class PuzzleGenerator {
             this.ctx.lineCap = 'round';
             this.ctx.globalAlpha = 0.85;
 
-            // Clip to puzzle area for internal lines
             this.ctx.save();
             this.ctx.beginPath();
             if (isCircular && this.circleBounds) {
@@ -1116,7 +1260,6 @@ class PuzzleGenerator {
             }
             this.ctx.clip();
 
-            // Draw all piece paths
             this.pieces.forEach(p => {
                 const path = new Path2D(p.path);
                 this.ctx.stroke(path);
@@ -1125,7 +1268,6 @@ class PuzzleGenerator {
             this.ctx.restore();
             this.ctx.globalAlpha = 1.0;
 
-            // Draw outer border
             this.ctx.lineWidth = strokeWidth * 1.5;
             if (isCircular && this.circleBounds) {
                 this.ctx.beginPath();
@@ -1136,7 +1278,6 @@ class PuzzleGenerator {
             }
         }
 
-        // Draw piece numbers
         if (this.state.numbered && this.pieces.length > 0) {
             this.ctx.fillStyle = 'rgba(255,255,255,0.9)';
             this.ctx.strokeStyle = '#000';
@@ -1180,7 +1321,7 @@ class PuzzleGenerator {
         this.ctx.fillText('Загрузите изображение', width / 2, height / 2);
     }
 
-    // ========== EXPORT ==========
+    // ==================== EXPORT ====================
 
     downloadPNG(mode) {
         if (this.pieces.length === 0) {
@@ -1204,7 +1345,6 @@ class PuzzleGenerator {
             tCtx.lineJoin = 'round';
             tCtx.lineCap = 'round';
 
-            // Clip and draw internal lines
             tCtx.save();
             tCtx.beginPath();
             if (isCircular && this.circleBounds) {
@@ -1219,7 +1359,6 @@ class PuzzleGenerator {
             });
             tCtx.restore();
 
-            // Outer border
             tCtx.lineWidth = strokeWidth * 1.5;
             if (isCircular && this.circleBounds) {
                 tCtx.beginPath();
@@ -1327,7 +1466,6 @@ class PuzzleGenerator {
             dxf += writePolyline(pathToPoints(p.path));
         });
 
-        // Outer border
         if (isCircular && this.circleBounds) {
             const cx = (this.circleBounds.cx / pxPerMm).toFixed(4);
             const cy = (hMM - this.circleBounds.cy / pxPerMm).toFixed(4);
@@ -1353,7 +1491,7 @@ class PuzzleGenerator {
         a.download = `puzzle-cnc-${Date.now()}.dxf`;
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('DXF для ЧПУ сохранён!');
+        this.showToast('DXF сохранён!');
     }
 
     showToast(msg) {
