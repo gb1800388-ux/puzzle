@@ -913,15 +913,37 @@ class PuzzleGenerator {
             this.ringConfig.push({ sectors });
         }
 
-        // Рассчитываем радиусы колец
+        // Рассчитываем радиусы колец с СЛУЧАЙНЫМИ смещениями
+        // Ключ: смещения должны быть достаточно разными, чтобы разрезы не выстраивались
+        let prevOffset = 0;
         for (let r = 0; r < numRings; r++) {
             const innerR = (r === 0) ? this.centerRadius : this.ringConfig[r - 1].outerRadius;
             const outerR = this.centerRadius + ((r + 1) / numRings) * (radius - this.centerRadius);
-            const offset = (r % 2 === 1) ? (Math.PI / this.ringConfig[r].sectors) : 0;
 
-            this.ringConfig[r].offset = offset;
+            const sectorAngle = (Math.PI * 2) / this.ringConfig[r].sectors;
+
+            // Смещение: случайное значение + гарантированный сдвиг от предыдущего кольца
+            // Минимум 30% от сектора разницы с предыдущим кольцом
+            let randomOffset;
+            if (r === 0) {
+                randomOffset = this.rng.nextFloat(0, Math.PI * 2);
+            } else {
+                // Гарантируем отличие от предыдущего кольца минимум на 0.3 * sectorAngle
+                const minDiff = sectorAngle * 0.3;
+                const maxDiff = sectorAngle * 0.7;
+                const diff = this.rng.nextFloat(minDiff, maxDiff);
+                const direction = this.rng.next() > 0.5 ? 1 : -1;
+                randomOffset = prevOffset + direction * diff + this.rng.nextFloat(-0.1, 0.1) * sectorAngle;
+            }
+
+            // Избегаем углов близких к 0, π/2, π, 3π/2 (чтобы не было прямых линий)
+            const tau = Math.PI * 2;
+            randomOffset = ((randomOffset % tau) + tau) % tau;
+
+            this.ringConfig[r].offset = randomOffset;
             this.ringConfig[r].innerRadius = innerR;
             this.ringConfig[r].outerRadius = outerR;
+            prevOffset = randomOffset;
         }
 
         // Генерируем радиальные рёбра
